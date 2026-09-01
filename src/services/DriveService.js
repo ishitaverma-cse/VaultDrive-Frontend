@@ -42,7 +42,7 @@ export function updateFile(fileId, data) {
     });
 }
 
-export function uploadFile(file) {
+export function uploadFile(file, onUploadProgress) {
     const token = localStorage.getItem("token");
 
     const formData = new FormData();
@@ -51,7 +51,8 @@ export function uploadFile(file) {
     return axios.post(`${BASE_URL}/api/files/upload`, formData, {
         headers: {
             Authorization: `Bearer ${token}`
-        }
+        },
+        onUploadProgress
     });
 }
 
@@ -86,4 +87,18 @@ export function renameFile(fileId, name) {
             Authorization: `Bearer ${token}`
         }
     });
+}
+
+export function getSignedUrl(fileId) {
+    const token = localStorage.getItem("token");
+
+    return axios.post(
+        `${BASE_URL}/api/files/${fileId}/signed-url`,
+        {},
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
 }

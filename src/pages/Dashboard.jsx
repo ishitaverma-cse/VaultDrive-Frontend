@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getFiles, getFolders, createFolder, updateFile, uploadFile, searchFiles, deleteFile, renameFile } from "../services/DriveService";
+import { getFiles, getFolders, createFolder, updateFile, uploadFile, searchFiles, deleteFile, renameFile, getSignedUrl } from "../services/DriveService";
 
 export default function Dashboard() {
     const [darkMode, setDarkMode] = useState(() => {
@@ -13,6 +13,11 @@ export default function Dashboard() {
     const [currentFolderId, setCurrentFolderId] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [toast, setToast] = useState(null);
+    const [previewFile, setPreviewFile] = useState(null);
 
     const user = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -197,31 +202,77 @@ export default function Dashboard() {
         }
     };
 
-    const handleUploadFile = async (event) => {
-        const file = event.target.files[0];
+    const showToast = (message, type = "success") => {
+        setToast({
+            message,
+            type
+        });
 
+        setTimeout(() => {
+            setToast(null);
+        }, 3000);
+    };
+
+    const handleUploadFile = async (file) => {
         if (!file) {
             return;
         }
 
         try {
-            await uploadFile(file);
+            setUploading(true);
+            setUploadProgress(0);
+            setError("");
+
+            await uploadFile(file, (progressEvent) => {
+                if (progressEvent.total) {
+                    const percent = Math.round(
+                        (progressEvent.loaded * 100) / progressEvent.total
+                    );
+
+                    setUploadProgress(percent);
+                }
+            });
 
             const response = await getFiles();
 
             setFiles(response.data.files || []);
 
-            alert("File uploaded successfully.");
+            showToast("File uploaded successfully.", "success");
         } catch (err) {
             console.error("UPLOAD FILE ERROR:", err);
 
-            alert(
+            showToast(
                 err.response?.data?.message ||
-                "Failed to upload file"
+                "Failed to upload file",
+                "error"
             );
+        } finally {
+            setUploading(false);
+            setUploadProgress(0);
+        }
+    };
+
+    const handleDragOver = (event) => {
+        event.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (event) => {
+        event.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = async (event) => {
+        event.preventDefault();
+        setIsDragging(false);
+
+        const file = event.dataTransfer.files[0];
+
+        if (!file) {
+            return;
         }
 
-        event.target.value = "";
+        await handleUploadFile(file);
     };
 
     const handleSearch = async (event) => {
@@ -306,6 +357,30 @@ export default function Dashboard() {
                     : "min-h-screen bg-slate-50 text-slate-900 transition-colors duration-300"
             }
         >
+
+            {/* ================= TOAST NOTIFICATION ================= */}
+            {toast && (
+                <div
+                    className={
+                        `fixed top-5 right-5 z-50 px-5 py-3 rounded-xl shadow-lg border flex items-center gap-3 transition-all duration-300 ${toast.type === "success"
+                            ? darkMode
+                                ? "bg-emerald-900 border-emerald-700 text-emerald-100"
+                                : "bg-emerald-50 border-emerald-200 text-emerald-700"
+                            : darkMode
+                                ? "bg-red-900 border-red-700 text-red-100"
+                                : "bg-red-50 border-red-200 text-red-700"
+                        }`
+                    }
+                >
+                    <span className="text-lg">
+                        {toast.type === "success" ? "✅" : "❌"}
+                    </span>
+
+                    <span className="text-sm font-semibold">
+                        {toast.message}
+                    </span>
+                </div>
+            )}
 
             {/* ================= TOP NAVBAR ================= */}
             <header
@@ -424,7 +499,15 @@ export default function Dashboard() {
                             <input
                                 type="file"
                                 className="hidden"
-                                onChange={handleUploadFile}
+                                onChange={(event) => {
+                                    const file = event.target.files[0];
+
+                                    if (file) {
+                                        handleUploadFile(file);
+                                    }
+
+                                    event.target.value = "";
+                                }}
                             />
                         </label>
 
@@ -498,6 +581,94 @@ export default function Dashboard() {
                             Your files and folders
                         </p>
 
+                    </div>
+
+                    {/* ================= DRAG & DROP UPLOAD ================= */}
+                    <div
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        className={
+                            isDragging
+                                ? darkMode
+                                    ? "mb-8 p-8 rounded-xl border-2 border-dashed border-indigo-400 bg-indigo-900/30 text-center transition"
+                                    : "mb-8 p-8 rounded-xl border-2 border-dashed border-indigo-500 bg-indigo-50 text-center transition"
+                                : darkMode
+                                    ? "mb-8 p-8 rounded-xl border-2 border-dashed border-slate-600 bg-slate-900 text-center hover:border-indigo-400 transition"
+                                    : "mb-8 p-8 rounded-xl border-2 border-dashed border-slate-300 bg-white text-center hover:border-indigo-400 transition"
+                        }
+                    >
+                        <div className="text-4xl mb-3">
+                            {isDragging ? "📥" : "📤"}
+                        </div>
+
+                        <h3 className="text-lg font-semibold mb-1">
+                            {isDragging
+                                ? "Drop your file here"
+                                : "Drag & Drop your file here"
+                            }
+                        </h3>
+
+                        <p
+                            className={
+                                darkMode
+                                    ? "text-sm text-slate-400"
+                                    : "text-sm text-slate-500"
+                            }
+                        >
+                            or click the button below to browse your files
+                        </p>
+
+                        {uploading && (
+                            <div className="w-full max-w-md mx-auto mt-5">
+                                <div
+                                    className={
+                                        darkMode
+                                            ? "h-2 rounded-full bg-slate-700 overflow-hidden"
+                                            : "h-2 rounded-full bg-slate-200 overflow-hidden"
+                                    }
+                                >
+                                    <div
+                                        className="h-full bg-indigo-500 transition-all duration-200"
+                                        style={{
+                                            width: `${uploadProgress}%`
+                                        }}
+                                    />
+                                </div>
+
+                                <p
+                                    className={
+                                        darkMode
+                                            ? "mt-2 text-xs text-slate-400"
+                                            : "mt-2 text-xs text-slate-500"
+                                    }
+                                >
+                                    {uploadProgress}% uploaded
+                                </p>
+                            </div>
+                        )}
+
+                        <label className="inline-block mt-4 px-5 py-2.5 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white font-semibold text-sm cursor-pointer transition">
+                            {uploading
+                                ? `Uploading... ${uploadProgress}%`
+                                : "Choose File"
+                            }
+
+                            <input
+                                type="file"
+                                className="hidden"
+                                disabled={uploading}
+                                onChange={(event) => {
+                                    const file = event.target.files[0];
+
+                                    if (file) {
+                                        handleUploadFile(file);
+                                    }
+
+                                    event.target.value = "";
+                                }}
+                            />
+                        </label>
                     </div>
 
 
@@ -693,6 +864,34 @@ export default function Dashboard() {
                                                 <div className="flex items-center gap-2">
 
                                                     <button
+                                                        onClick={async () => {
+                                                            try {
+                                                                const response = await getSignedUrl(file.id);
+
+                                                                setPreviewFile({
+                                                                    ...file,
+                                                                    previewUrl: response.data.signed_url
+                                                                });
+                                                            } catch (err) {
+                                                                console.error("PREVIEW ERROR:", err);
+
+                                                                showToast(
+                                                                    err.response?.data?.message ||
+                                                                    "Failed to load file preview",
+                                                                    "error"
+                                                                );
+                                                            }
+                                                        }}
+                                                        className={
+                                                            darkMode
+                                                                ? "px-3 py-1.5 text-xs rounded-lg border border-slate-600 hover:bg-slate-700 transition"
+                                                                : "px-3 py-1.5 text-xs rounded-lg border border-slate-200 hover:bg-slate-100 transition"
+                                                        }
+                                                    >
+                                                        Preview
+                                                    </button>
+
+                                                    <button
                                                         onClick={() => handleRenameFile(file.id, file.name)}
                                                         className={
                                                             darkMode
@@ -733,6 +932,122 @@ export default function Dashboard() {
                             </section>
 
                         </>
+                    )}
+
+                    {/* ================= FILE PREVIEW MODAL ================= */}
+                    {previewFile && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6">
+
+                            <div
+                                className={
+                                    darkMode
+                                        ? "relative w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl"
+                                        : "relative w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-2xl bg-white border border-slate-200 shadow-2xl"
+                                }
+                            >
+
+                                {/* Header */}
+                                <div
+                                    className={
+                                        darkMode
+                                            ? "flex items-center justify-between px-6 py-4 border-b border-slate-700"
+                                            : "flex items-center justify-between px-6 py-4 border-b border-slate-200"
+                                    }
+                                >
+
+                                    <div>
+                                        <h3 className="font-semibold">
+                                            {previewFile.name}
+                                        </h3>
+
+                                        <p
+                                            className={
+                                                darkMode
+                                                    ? "text-xs text-slate-400 mt-1"
+                                                    : "text-xs text-slate-500 mt-1"
+                                            }
+                                        >
+                                            {previewFile.mime_type || "File"}
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        onClick={() => setPreviewFile(null)}
+                                        className="w-9 h-9 rounded-lg hover:bg-slate-700 text-lg"
+                                    >
+                                        ✕
+                                    </button>
+
+                                </div>
+
+
+                                {/* Preview Content */}
+                                <div className="p-6 max-h-[calc(90vh-80px)] overflow-auto">
+
+                                    {/* IMAGE */}
+                                    {previewFile.mime_type?.startsWith("image/") && (
+                                        <div className="flex justify-center">
+                                            <img
+                                                src={previewFile.previewUrl}
+                                                alt={previewFile.name}
+                                                className="max-w-full max-h-[70vh] object-contain rounded-lg"
+                                            />
+                                        </div>
+                                    )}
+
+
+                                    {/* PDF */}
+                                    {previewFile.mime_type === "application/pdf" && (
+                                        <iframe
+                                            src={previewFile.previewUrl}
+                                            title={previewFile.name}
+                                            className="w-full h-[70vh] rounded-lg border border-slate-300"
+                                        />
+                                    )}
+
+
+                                    {/* TEXT */}
+                                    {(
+                                        previewFile.mime_type === "text/plain" ||
+                                        previewFile.mime_type === "text/csv" ||
+                                        previewFile.mime_type === "application/json"
+                                    ) && (
+                                            <iframe
+                                                src={previewFile.previewUrl}
+                                                title={previewFile.name}
+                                                className="w-full h-[70vh] rounded-lg border border-slate-300"
+                                            />
+                                        )}
+
+
+                                    {/* UNSUPPORTED */}
+                                    {!previewFile.mime_type?.startsWith("image/") &&
+                                        previewFile.mime_type !== "application/pdf" &&
+                                        previewFile.mime_type !== "text/plain" &&
+                                        previewFile.mime_type !== "text/csv" &&
+                                        previewFile.mime_type !== "application/json" && (
+                                            <div className="py-20 text-center">
+
+                                                <div className="text-5xl mb-4">
+                                                    📄
+                                                </div>
+
+                                                <h3 className="text-lg font-semibold">
+                                                    Preview not available
+                                                </h3>
+
+                                                <p className="mt-2 text-sm text-slate-500">
+                                                    This file type cannot be previewed directly.
+                                                </p>
+
+                                            </div>
+                                        )}
+
+                                </div>
+
+                            </div>
+
+                        </div>
                     )}
 
                 </main>
