@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getFiles, getFolders, createFolder, updateFile, uploadFile, searchFiles, deleteFile, renameFile, getSignedUrl } from "../services/DriveService";
+import { getFiles, getFolders, createFolder, updateFile, uploadFile, searchFiles, deleteFile, renameFile, getSignedUrl, createShareLink, setFilePermission } from "../services/DriveService";
 
 export default function Dashboard() {
     const [darkMode, setDarkMode] = useState(() => {
@@ -18,6 +18,14 @@ export default function Dashboard() {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [toast, setToast] = useState(null);
     const [previewFile, setPreviewFile] = useState(null);
+    const [shareFile, setShareFile] = useState(null);
+    const [shareLink, setShareLink] = useState("");
+    const [shareLoading, setShareLoading] = useState(false);
+    const [linkCopied, setLinkCopied] = useState(false);
+    const [permissionFile, setPermissionFile] = useState(null);
+    const [permissionEmail, setPermissionEmail] = useState("");
+    const [permissionRole, setPermissionRole] = useState("viewer");
+    const [permissionLoading, setPermissionLoading] = useState(false);
 
     const user = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -346,6 +354,69 @@ export default function Dashboard() {
                 err.response?.data?.message ||
                 "Failed to delete file"
             );
+        }
+    };
+
+    const handleShareFile = async (file) => {
+        setShareFile(file);
+        setShareLink("");
+        setShareLoading(true);
+        setLinkCopied(false);
+
+        try {
+            const response = await createShareLink(file.id);
+
+            const token = response.data.share.share_token;
+
+            const publicLink =
+                `${import.meta.env.VITE_API_URL}/api/share/access/${token}`;
+
+            setShareLink(publicLink);
+
+        } catch (err) {
+            console.error("SHARE ERROR:", err);
+
+            alert(
+                err.response?.data?.message ||
+                "Failed to create share link"
+            );
+
+            setShareFile(null);
+        } finally {
+            setShareLoading(false);
+        }
+    };
+
+    const handleSetPermission = async () => {
+        if (!permissionFile || !permissionEmail) {
+            showToast("Please enter a user email.", "error");
+            return;
+        }
+
+        try {
+            setPermissionLoading(true);
+
+            await setFilePermission(
+                permissionFile.id,
+                permissionEmail,
+                permissionRole
+            );
+
+            showToast("Permission updated successfully.", "success");
+
+            setPermissionFile(null);
+            setPermissionEmail("");
+            setPermissionRole("viewer");
+        } catch (err) {
+            console.error("PERMISSION ERROR:", err);
+
+            showToast(
+                err.response?.data?.message ||
+                "Failed to update permission",
+                "error"
+            );
+        } finally {
+            setPermissionLoading(false);
         }
     };
 
@@ -892,6 +963,32 @@ export default function Dashboard() {
                                                     </button>
 
                                                     <button
+                                                        onClick={() => handleShareFile(file)}
+                                                        className={
+                                                            darkMode
+                                                                ? "px-3 py-1.5 text-xs rounded-lg border border-indigo-500 text-indigo-400 hover:bg-indigo-900 transition"
+                                                                : "px-3 py-1.5 text-xs rounded-lg border border-indigo-500 text-indigo-600 hover:bg-indigo-50 transition"
+                                                        }
+                                                    >
+                                                        Share
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => {
+                                                            setPermissionFile(file);
+                                                            setPermissionEmail("");
+                                                            setPermissionRole("viewer");
+                                                        }}
+                                                        className={
+                                                            darkMode
+                                                                ? "px-3 py-1.5 text-xs rounded-lg border border-purple-500 text-purple-400 hover:bg-purple-900 transition"
+                                                                : "px-3 py-1.5 text-xs rounded-lg border border-purple-500 text-purple-600 hover:bg-purple-50 transition"
+                                                        }
+                                                    >
+                                                        Permissions
+                                                    </button>
+
+                                                    <button
                                                         onClick={() => handleRenameFile(file.id, file.name)}
                                                         className={
                                                             darkMode
@@ -1047,6 +1144,196 @@ export default function Dashboard() {
 
                             </div>
 
+                        </div>
+                    )}
+
+                    {shareFile && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+
+                            <div
+                                className={
+                                    darkMode
+                                        ? "w-full max-w-lg rounded-2xl bg-slate-900 border border-slate-700 p-6 shadow-2xl"
+                                        : "w-full max-w-lg rounded-2xl bg-white border border-slate-200 p-6 shadow-2xl"
+                                }
+                            >
+
+                                <div className="flex items-center justify-between mb-6">
+
+                                    <div>
+                                        <h2 className="text-xl font-bold">
+                                            Share File
+                                        </h2>
+
+                                        <p
+                                            className={
+                                                darkMode
+                                                    ? "mt-1 text-sm text-slate-400"
+                                                    : "mt-1 text-sm text-slate-500"
+                                            }
+                                        >
+                                            {shareFile.name}
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        onClick={() => setShareFile(null)}
+                                        className="text-xl text-slate-400 hover:text-slate-200"
+                                    >
+                                        ✕
+                                    </button>
+
+                                </div>
+
+
+                                {shareLoading ? (
+
+                                    <div className="py-8 text-center text-sm text-slate-400">
+                                        Creating secure share link...
+                                    </div>
+
+                                ) : (
+
+                                    <>
+
+                                        <label className="block mb-2 text-sm font-semibold">
+                                            Shareable Link
+                                        </label>
+
+                                        <div className="flex gap-2">
+
+                                            <input
+                                                type="text"
+                                                value={shareLink}
+                                                readOnly
+                                                className={
+                                                    darkMode
+                                                        ? "flex-1 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white outline-none"
+                                                        : "flex-1 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-sm text-slate-900 outline-none"
+                                                }
+                                            />
+
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        await navigator.clipboard.writeText(shareLink);
+
+                                                        setLinkCopied(true);
+
+                                                        setTimeout(() => {
+                                                            setLinkCopied(false);
+                                                        }, 2000);
+                                                    } catch (err) {
+                                                        console.error("COPY LINK ERROR:", err);
+                                                    }
+                                                }}
+                                                className="px-4 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-semibold transition"
+                                            >
+                                                {linkCopied ? "✓ Copied" : "Copy"}
+                                            </button>
+
+                                        </div>
+
+                                        <p
+                                            className={
+                                                darkMode
+                                                    ? "mt-3 text-xs text-slate-400"
+                                                    : "mt-3 text-xs text-slate-500"
+                                            }
+                                        >
+                                            Anyone with this link can access the shared file
+                                            until the link expires.
+                                        </p>
+
+                                    </>
+
+                                )}
+
+                            </div>
+
+                        </div>
+                    )}
+
+                    {permissionFile && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+                            <div
+                                className={
+                                    `w-full max-w-md rounded-2xl p-6 shadow-2xl ${darkMode
+                                        ? "bg-slate-900 text-white"
+                                        : "bg-white text-slate-900"
+                                    }`
+                                }
+                            >
+                                {/* Header */}
+                                <div className="flex items-center justify-between mb-6">
+                                    <div>
+                                        <h2 className="text-xl font-bold">
+                                            Manage Permissions
+                                        </h2>
+
+                                        <p
+                                            className={
+                                                `text-sm mt-1 ${darkMode
+                                                    ? "text-slate-400"
+                                                    : "text-slate-500"
+                                                }`
+                                            }
+                                        >
+                                            {permissionFile.name}
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        onClick={() => setPermissionFile(null)}
+                                        className="text-xl text-slate-400 hover:text-slate-200"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                {/* User Email */}
+                                <label className="block mb-2 text-sm font-medium text-white">
+                                    User Email
+                                </label>
+
+                                <input
+                                    type="email"
+                                    value={permissionEmail}
+                                    onChange={(e) => setPermissionEmail(e.target.value)}
+                                    placeholder="Enter user email"
+                                    className="w-full px-4 py-3 mb-2 rounded-lg bg-slate-800 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+
+                                {/* Role */}
+                                <label className="block mb-2 text-sm font-semibold">
+                                    Permission
+                                </label>
+
+                                <select
+                                    value={permissionRole}
+                                    onChange={(e) => setPermissionRole(e.target.value)}
+                                    className={
+                                        `w-full px-4 py-2.5 rounded-lg border outline-none mb-6 ${darkMode
+                                            ? "bg-slate-800 border-slate-700 text-white"
+                                            : "bg-white border-slate-300 text-slate-900"
+                                        }`
+                                    }
+                                >
+                                    <option value="viewer">Viewer</option>
+                                    <option value="editor">Editor</option>
+                                </select>
+
+                                {/* Save */}
+                                <button
+                                    onClick={handleSetPermission}
+                                    disabled={permissionLoading}
+                                    className="w-full px-4 py-2.5 rounded-lg bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm font-semibold transition"
+                                >
+                                    {permissionLoading
+                                        ? "Saving..."
+                                        : "Save Permission"}
+                                </button>
+                            </div>
                         </div>
                     )}
 

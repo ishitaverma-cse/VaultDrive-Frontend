@@ -19,6 +19,7 @@ export default function Signup() {
             });
 
             console.log("SIGNUP RESPONSE:", res.data);
+            navigate("/");
 
         } catch (err) {
             console.log("SIGNUP ERROR:", err);

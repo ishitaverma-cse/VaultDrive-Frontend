@@ -102,3 +102,34 @@ export function getSignedUrl(fileId) {
         }
     );
 }
+
+export function createShareLink(fileId) {
+    const token = localStorage.getItem("token");
+
+    return axios.post(
+        `${BASE_URL}/api/share/${fileId}`,
+        {},
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
+
+export function setFilePermission(fileId, email, role) {
+    const token = localStorage.getItem("token");
+
+    return axios.post(
+        `${BASE_URL}/api/permissions/${fileId}`,
+        {
+            email,
+            role
+        },
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
