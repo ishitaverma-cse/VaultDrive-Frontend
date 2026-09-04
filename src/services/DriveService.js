@@ -133,3 +133,31 @@ export function setFilePermission(fileId, email, role) {
         }
     );
 }
+
+export function getTrash() {
+    const token = localStorage.getItem("token");
+
+    return axios.post(
+        `${BASE_URL}/api/trash`,
+        {},
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
+
+export function restoreTrash(type, itemId) {
+    const token = localStorage.getItem("token");
+
+    return axios.post(
+        `${BASE_URL}/api/trash/${type}/${itemId}/restore`,
+        {},
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
