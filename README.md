@@ -365,7 +365,7 @@ React frontend initialization.
 
 ### 📸 Evidence
 
-![Day 8 – Frontend Setup](docs/Day 8/day-8-frontend-setup.png)
+![Day 8 – Frontend Setup](docs/day-8/day-8-frontend-setup.png)
 
 ---
 
