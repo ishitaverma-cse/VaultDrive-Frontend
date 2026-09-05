@@ -1,266 +1,381 @@
-# VaultDrive
-
-VaultDrive is a full-stack file management system that allows users to securely upload, manage, organize, search, share, star, version, and delete files through a modern web interface.
-
-## Features
-
-- User registration and login
-- JWT-based authentication
-- Google OAuth authentication
-- Secure file upload and storage
-- File rename and update
-- Folder creation and organization
-- Folder hierarchy and navigation
-- File sharing with permissions
-- Search functionality
-- Pagination and lazy loading
-- Recent files
-- Starred files
-- Trash management
-- File restoration
-- Permanent file and folder deletion
-- File versioning and version history
-- Account section
-- Responsive dashboard
-- Light and dark mode
-- Toast notifications and error handling
-
-## Tech Stack
-
-### Frontend
-- React.js
-- Vite
-- JavaScript
-- Tailwind CSS
-- Axios
-- Supabase Authentication
-
-### Backend
-- Node.js
-- Express.js
-- PostgreSQL
-- Supabase
-- JWT
-- bcrypt
-- Multer
-
-### Deployment
-- Frontend: Vercel
-- Backend: Render
-- Database: Supabase PostgreSQL
-- File Storage: Supabase Storage
-
-## Project Structure
-
-```text
-VaultDrive-Frontend/
-├── public/
-├── src/
-│   ├── components/
-│   ├── lib/
-│   │   └── supabase.js
-│   ├── pages/
-│   │   ├── Dashboard.jsx
-│   │   └── Login.jsx
-│   ├── services/
-│   │   └── DriveService.js
-│   └── ...
-├── .env
-├── package.json
-└── README.md
-
-## Authentication
-
-VaultDrive supports two authentication methods:
-
-1. Email and password authentication using bcrypt and JWT.
-2. Google OAuth authentication using Supabase Auth.
-
-After successful authentication, the application receives a VaultDrive JWT token which is used to access protected backend APIs.
-
-## File Management
-
-Users can securely manage their files through the VaultDrive dashboard.
-
-Supported operations include:
-
-- Upload files
-- Download files
-- Rename files
-- Update files
-- Delete files
-- Restore deleted files
-- Permanently delete files
-- Star and unstar files
-- View recent files
-- Search files
-- Organize files into folders
-
-## Folder Management
-
-VaultDrive provides folder-based file organization.
-
-Users can:
-
-- Create folders
-- Open folders
-- Navigate through folder hierarchy
-- Rename folders
-- Delete folders
-- Restore deleted folders
-- Permanently delete folders
-
-## File Sharing & Permissions
-
-VaultDrive supports secure file sharing through shareable links and permission-based access.
-
-Features include:
-
-- Generate shareable file links
-- Role-based file permissions
-- Secure access to shared files
-- Signed URLs for protected file downloads
-
-## Search & Pagination
-
-VaultDrive uses PostgreSQL full-text search to provide efficient file searching.
-
-The dashboard also supports pagination to avoid loading large numbers of files at once.
-
-Additional optimization features include:
-
-- Search result pagination
-- Lazy loading
-- Sorting by name, size, and date
-- Recent file filtering
-
-## Starred Files
-
-Users can mark important files as starred for quick access.
-
-The Starred section provides:
-
-- Star a file
-- Unstar a file
-- View all starred files
-- Persistent starred status through the backend
-
-## Trash Management
-
-Deleted files and folders are moved to the Trash using soft deletion.
-
-Users can:
-
-- View deleted files and folders
-- Restore files
-- Restore folders
-- Permanently delete files
-- Permanently delete folders
-
-Permanent deletion removes the corresponding database record and stored file from Supabase Storage.
-
-## File Versioning
-
-VaultDrive maintains version history for updated files.
-
-Each file version stores:
-
-- Version number
-- File name
-- Storage path
-- File size
-- MIME type
-- Creation timestamp
-
-This allows file changes to be tracked over time.
-
-## Account Management
-
-The Account section provides access to the currently authenticated user's account information.
-
-It displays:
-
-- User name
-- Email address
-- Authentication information
-- Logout functionality
-
-## Responsive Design
-
-The VaultDrive dashboard is designed to work across different screen sizes.
-
-The frontend includes:
-
-- Responsive sidebar navigation
-- Mobile-friendly dashboard layout
-- Responsive file cards
-- Responsive search and sorting controls
-- Mobile-friendly pagination
-- Adaptive UI components
-
-## Theme Support
-
-VaultDrive supports both:
-
-- Light mode
-- Dark mode
-
-The dashboard adapts its navigation, cards, buttons, text, and other UI elements according to the selected theme.
-
-## Error Handling
-
-The application provides user-friendly feedback through toast notifications and error messages.
-
-Error handling is implemented for:
-
-- Authentication failures
-- File upload failures
-- File operation failures
-- Search failures
-- Trash operations
-
-- Starred file operations
-- Network/API errors
-
-## Environment Variables
-
-Create a `.env` file in the frontend root directory:
-
-```env
-VITE_API_URL= your_backend_url
-VITE_SUPABASE_URL= your_supabase_url
-VITE_SUPABASE_ANON_KEY= your_supabase_publishable_key
-
-## Development Progress
-
-VaultDrive was developed incrementally through a 14-day implementation cycle. Each phase focused on a specific part of the application, followed by testing and verification.
+# 🔐 VaultDrive
+
+<p align="center">
+  <strong>A modern full-stack file management system for secure cloud file storage and organization.</strong>
+</p>
+
+<p align="center">
+  Upload • Organize • Search • Share • Manage
+</p>
 
 ---
 
-### Day 1 – Project Setup
+## 🚀 About VaultDrive
 
-**Focus:** Backend initialization and database connectivity.
+**VaultDrive** is a full-stack file management system that allows users to securely upload, manage, organize, search, share, and access their files through a modern and responsive web interface.
 
-Implemented:
+The application combines a **React frontend**, **Node.js/Express backend**, **PostgreSQL database**, and **Supabase cloud storage** to provide a complete file management experience.
 
-- Initialized the VaultDrive backend
+---
+
+## ✨ Features
+
+### 🔐 Authentication
+
+- User registration and login
+- JWT-based authentication
+- Password hashing using bcrypt
+- Protected backend routes
+- Authentication middleware
+- Google OAuth authentication using Supabase Auth
+
+### 📁 File Management
+
+- Secure file upload
+- File rename
+- File update
+- File download
+- File deletion
+- File preview
+- Image thumbnails
+- Upload progress indicator
+- Secure cloud storage using Supabase Storage
+
+### 📂 Folder Organization
+
+- Create folders
+- Open folders
+- Folder hierarchy
+- Folder navigation
+- Organize files inside folders
+
+### 🔎 Search & Discovery
+
+- PostgreSQL full-text search
+- Real-time search
+- Debounced search
+- Search result handling
+- Recent files
+- Sorting by:
+  - Name
+  - Size
+  - Date
+
+### 📄 Pagination & Performance
+
+- Client-side file pagination
+- Numbered pagination controls
+- Lazy loading of image thumbnails
+- Debounced search requests
+- Optimized dashboard rendering
+
+### 🔗 Sharing & Permissions
+
+- Generate secure shareable links
+- Role-based file permissions
+- Permission-based file access
+- Signed URLs for protected file access
+
+### 🗑️ Trash Management
+
+- Soft-delete files
+- View deleted files
+- Restore deleted files
+
+### 🎨 Modern UI
+
+- Responsive dashboard
+- Grid and list file views
+- Responsive mobile navigation
+- Light mode
+- Dark mode
+- Toast notifications
+- Loading states
+- Error handling
+- Profile menu
+- Logout functionality
+
+---
+
+## 🛠️ Tech Stack
+
+| Category | Technologies |
+|----------|--------------|
+| 🎨 Frontend | React.js, Vite, JavaScript, Tailwind CSS, Axios |
+| ⚙️ Backend | Node.js, Express.js |
+| 🗄️ Database | PostgreSQL |
+| 🔐 Authentication | JWT, bcrypt, Supabase Auth |
+| ☁️ Storage | Supabase Storage |
+| 🧪 Testing | Jest, Supertest, Postman |
+| 🚀 Frontend Deployment | Vercel |
+| 🌐 Backend Deployment | Render |
+
+---
+
+## 🏗️ Application Architecture
+
+```text
+                         ┌──────────────────────┐
+                         │      VaultDrive      │
+                         │      Frontend        │
+                         │   React + Vite       │
+                         └──────────┬───────────┘
+                                    │
+                                    │ REST API
+                                    ▼
+                         ┌──────────────────────┐
+                         │       Backend        │
+                         │  Node.js + Express   │
+                         │  JWT Authentication  │
+                         └──────────┬───────────┘
+                                    │
+                     ┌──────────────┴──────────────┐
+                     ▼                             ▼
+          ┌────────────────────┐       ┌────────────────────┐
+          │    PostgreSQL      │       │  Supabase Storage  │
+          │      Database      │       │    File Storage    │
+          └────────────────────┘       └────────────────────┘
+```
+
+---
+
+## 📁 Project Structure
+
+### 🎨 Frontend
+
+```text
+VaultDrive-Frontend/
+│
+├── public/
+│
+├── src/
+│   ├── components/
+│   │
+│   ├── lib/
+│   │   └── supabase.js
+│   │
+│   ├── pages/
+│   │   ├── Dashboard.jsx
+│   │   └── Login.jsx
+│   │
+│   ├── services/
+│   │   ├── AuthService.js
+│   │   └── DriveService.js
+│   │
+│   └── ...
+│
+├── .env
+├── package.json
+└── README.md
+```
+
+### ⚙️ Backend
+
+```text
+VaultDrive-Backend/
+│
+├── controllers/
+├── middleware/
+├── routes/
+├── tests/
+│
+├── db.js
+├── index.js
+├── package.json
+└── ...
+```
+
+---
+
+## 🔐 Authentication
+
+VaultDrive supports multiple authentication mechanisms.
+
+### 📧 Email & Password
+
+Users can register and log in using their email address and password.
+
+Passwords are securely hashed using **bcrypt** before being stored.
+
+### 🎫 JWT Authentication
+
+After successful authentication, the application generates a JWT token.
+
+The token is used to access protected backend APIs.
+
+### 🔵 Google OAuth
+
+Google authentication is integrated using **Supabase Auth**.
+
+This allows users to authenticate using their Google account.
+
+---
+
+## 📂 File Management
+
+VaultDrive provides a centralized dashboard for managing uploaded files.
+
+### Supported Operations
+
+| Operation | Supported |
+|-----------|-----------|
+| 📤 Upload | ✅ |
+| 👁️ Preview | ✅ |
+| 📥 Download | ✅ |
+| ✏️ Rename | ✅ |
+| 🔄 Update | ✅ |
+| 🗑️ Delete | ✅ |
+| 🔎 Search | ✅ |
+| 📂 Organize | ✅ |
+
+Files are stored securely in **Supabase Storage**, while file metadata is maintained in **PostgreSQL**.
+
+---
+
+## 📁 Folder Management
+
+VaultDrive provides hierarchical folder organization.
+
+### Users Can
+
+- 📂 Create folders
+- 📂 Open folders
+- ↔️ Navigate through folder hierarchy
+- 🗂️ Organize files inside folders
+- 🔄 Navigate between parent and child folders
+
+---
+
+## 🔗 File Sharing & Permissions
+
+VaultDrive supports secure file sharing through shareable links and permission-based access.
+
+### Sharing Features
+
+- 🔗 Generate shareable links
+- 👤 Assign file permissions
+- 🔐 Role-based access
+- 🛡️ Protected shared-file access
+- 🔑 Signed URLs for secure file access
+
+---
+
+## 🔎 Search & Optimization
+
+VaultDrive uses **PostgreSQL full-text search** for efficient file discovery.
+
+### Search Features
+
+- 🔍 Real-time search
+- ⚡ Debounced search
+- 🗄️ PostgreSQL full-text search
+- 📄 Search result pagination
+- ↕️ Sorting by name, size, and date
+- 🕒 Recent file filtering
+
+### ⚡ Performance Features
+
+- Client-side pagination
+- Lazy loading of image thumbnails
+- Debounced API requests
+- Optimized dashboard rendering
+
+---
+
+## 🗑️ Trash Management
+
+VaultDrive uses **soft deletion** to move deleted files into Trash instead of immediately removing them.
+
+### Trash Features
+
+- 🗑️ View deleted files
+- ♻️ Restore deleted files
+- 🔐 Preserve deleted file metadata
+
+---
+
+## 🎨 Responsive Design
+
+VaultDrive is designed to work across desktop, tablet, and mobile screen sizes.
+
+### 📱 Responsive Features
+
+- Responsive sidebar
+- Mobile navigation drawer
+- Responsive file cards
+- Responsive search controls
+- Responsive sorting controls
+- Mobile-friendly pagination
+- Adaptive dashboard layout
+
+---
+
+## 🌗 Theme Support
+
+VaultDrive supports both major interface themes.
+
+| Theme | Status |
+|-------|--------|
+| ☀️ Light Mode | ✅ |
+| 🌙 Dark Mode | ✅ |
+
+The selected theme is persisted locally so that the user's preference is maintained.
+
+---
+
+## 🔔 Notifications & Error Handling
+
+VaultDrive provides user-friendly feedback through toast notifications and error states.
+
+### Handles
+
+- ❌ Authentication failures
+- ❌ File upload failures
+- ❌ File operation failures
+- ❌ Search failures
+- ❌ Trash operation failures
+- ❌ Network/API errors
+- ⏳ Loading states
+- 📊 Upload progress
+
+---
+
+# 📅 Development Progress
+
+VaultDrive was developed incrementally through a **14-day implementation cycle**.
+
+Each development phase focused on a specific part of the application, followed by testing and verification.
+
+---
+
+## 📅 Day 1 — Project Setup
+
+### 🎯 Focus
+
+Backend initialization and database connectivity.
+
+### ✅ Implemented
+
+- Initialized VaultDrive backend
 - Set up Node.js and Express
 - Connected PostgreSQL using Supabase
 - Configured environment variables
 - Established database connectivity
-- Created the initial backend project structure
+- Created initial backend project structure
 
-**Evidence:**
+### 📸 Evidence
 
 ![Day 1 – Backend Project Setup](docs/day-1/day-1-project-setup.png)
 
 ---
 
-### Day 2 – Authentication
+## 📅 Day 2 — Authentication
 
-**Focus:** Secure user authentication.
+### 🎯 Focus
 
-Implemented:
+Secure user authentication.
+
+### ✅ Implemented
 
 - User registration
 - User login
@@ -270,17 +385,19 @@ Implemented:
 - Protected API routes
 - Google OAuth authentication using Supabase Auth
 
-**Evidence:**
+### 📸 Evidence
 
 ![Day 2 – Authentication](docs/day-2/day-2-authentication.png)
 
 ---
 
-### Day 3 – File Upload & Storage
+## 📅 Day 3 — File Upload & Storage
 
-**Focus:** Secure file uploading and cloud storage.
+### 🎯 Focus
 
-Implemented:
+Secure file uploading and cloud storage.
+
+### ✅ Implemented
 
 - File upload API
 - Multer middleware
@@ -290,17 +407,19 @@ Implemented:
 - User-specific file storage
 - File upload testing using Postman
 
-**Evidence:**
+### 📸 Evidence
 
 ![Day 3 – File Upload](docs/day-3/day-3-file-upload.png)
 
 ---
 
-### Day 4 – File Management APIs
+## 📅 Day 4 — File Management APIs
 
-**Focus:** File and folder management.
+### 🎯 Focus
 
-Implemented:
+File and folder management.
+
+### ✅ Implemented
 
 - File CRUD operations
 - File rename functionality
@@ -311,56 +430,62 @@ Implemented:
 - Trash APIs
 - Folder management APIs
 
-**Evidence:**
+### 📸 Evidence
 
 ![Day 4 – File Management APIs](docs/day-4/day-4-file-management.png)
 
 ---
 
-### Day 5 – Sharing & Permissions
+## 📅 Day 5 — Sharing & Permissions
 
-**Focus:** Secure file sharing and access control.
+### 🎯 Focus
 
-Implemented:
+Secure file sharing and access control.
+
+### ✅ Implemented
 
 - Shareable file links
 - Role-based permissions
 - Permission-based file access
 - Secure shared file access
-- Signed URLs for protected downloads
-- Sharing and permission API testing
+- Signed URLs
+- Sharing API testing
+- Permission API testing
 
-**Evidence:**
+### 📸 Evidence
 
-![Day 5 – Sharing and Permissions](docs/day-5/day-5-sharing-permissions.png)
+![Day 5 – Sharing & Permissions](docs/day-5/day-5-sharing-permissions.png)
 
 ---
 
-### Day 6 – Search & Optimization
+## 📅 Day 6 — Search & Optimization
 
-**Focus:** Efficient file discovery and API optimization.
+### 🎯 Focus
 
-Implemented:
+Efficient file discovery and API optimization.
+
+### ✅ Implemented
 
 - PostgreSQL full-text search
 - File search API
 - Search result pagination
-- Pagination for file retrieval
-- Lazy loading
+- File retrieval pagination
 - Sorting functionality
 - Optimized file retrieval queries
 
-**Evidence:**
+### 📸 Evidence
 
 ![Day 6 – Search API](docs/day-6/day-6-search-api.png)
 
 ---
 
-### Day 7 – Testing & Backend Deployment
+## 📅 Day 7 — Testing & Backend Deployment
 
-**Focus:** Backend testing and production deployment.
+### 🎯 Focus
 
-Implemented:
+Backend testing and production deployment.
+
+### ✅ Implemented
 
 - API testing using Postman
 - Jest test setup
@@ -372,7 +497,7 @@ Implemented:
 - Search and pagination API testing
 - Backend deployment using Render
 
-**Evidence:**
+### 📸 Evidence
 
 ![Day 7 – Backend Testing](docs/day-7/day-7-testing.png)
 
@@ -380,11 +505,13 @@ Implemented:
 
 ---
 
-### Day 8 – Frontend Setup
+## 📅 Day 8 — Frontend Setup
 
-**Focus:** React frontend initialization.
+### 🎯 Focus
 
-Implemented:
+React frontend initialization.
+
+### ✅ Implemented
 
 - Created React frontend using Vite
 - Configured Tailwind CSS
@@ -395,17 +522,19 @@ Implemented:
 - Created initial dashboard structure
 - Configured frontend environment variables
 
-**Evidence:**
+### 📸 Evidence
 
 ![Day 8 – Frontend Setup](docs/day-8/day-8-frontend-setup.png)
 
 ---
 
-### Day 9 – Dashboard UI
+## 📅 Day 9 — Dashboard UI
 
-**Focus:** Building the main VaultDrive user interface.
+### 🎯 Focus
 
-Implemented:
+Building the main VaultDrive user interface.
+
+### ✅ Implemented
 
 - VaultDrive dashboard
 - Sidebar navigation
@@ -418,17 +547,19 @@ Implemented:
 - Light and dark mode
 - Responsive dashboard components
 
-**Evidence:**
+### 📸 Evidence
 
 ![Day 9 – Dashboard](docs/day-9/day-9-dashboard.png)
 
 ---
 
-### Day 10 – File Upload Management
+## 📅 Day 10 — File Upload Management
 
-**Focus:** Connecting the dashboard with file management APIs.
+### 🎯 Focus
 
-Implemented:
+Connecting the dashboard with file management APIs.
+
+### ✅ Implemented
 
 - Frontend file upload
 - File upload interface
@@ -438,130 +569,271 @@ Implemented:
 - File download
 - File deletion
 - File operation feedback
-- Improved file management interactions
+- Upload progress indicator
 
-**Evidence:**
+### 📸 Evidence
 
 ![Day 10 – File Upload Management](docs/day-10/day-10-file-management.png)
 
 ---
 
-### Day 11 – File Organization & Dashboard Features
+## 📅 Day 11 — File Organization & Dashboard Features
 
-**Focus:** Improving file organization and dashboard functionality.
+### 🎯 Focus
 
-Implemented:
+Improving file organization and dashboard functionality.
+
+### ✅ Implemented
 
 - Folder navigation
 - Folder hierarchy
 - Folder creation
-- Folder rename
-- Folder deletion
 - Recent files
-- Starred files
-- Star and unstar functionality
-- Account functionality
+- Account section
 - Responsive navigation
 - Improved dashboard interactions
 
-**Evidence:**
+### 📸 Evidence
 
 ![Day 11 – File Organization](docs/day-11/day-11-file-organization.png)
 
 ---
 
-### Day 12 – Search Optimization & Pagination
+## 📅 Day 12 — Search Optimization & Pagination
 
-**Focus:** Improving search performance and navigation.
+### 🎯 Focus
 
-Implemented:
+Improving search, sorting, pagination, and dashboard performance.
+
+### ✅ Implemented
 
 - Frontend search integration
 - PostgreSQL full-text search integration
-- Search result pagination
+- Debounced search
+- Search result handling
+- Client-side pagination
 - Numbered pagination controls
-- Gmail-style pagination
-- Lazy loading
-- Sorting and filtering
-- Improved search result handling
+- Sorting by name
+- Sorting by size
+- Sorting by date
+- Lazy loading of image thumbnails
 - Improved pagination UI
+- Improved dashboard responsiveness
 
-**Evidence:**
+### 📸 Evidence
 
-![Day 12 – Search and Pagination](docs/day-12/day-12-search-pagination.png)
+![Day 12 – Search & Pagination](docs/day-12/day-12-search-pagination.png)
 
 ---
 
-### Day 13 – Trash, Versioning & Final Testing
+## 📅 Day 13 — Trash, Versioning & Final Testing
 
-**Focus:** Completing file lifecycle management and version tracking.
+### 🎯 Focus
 
-Implemented:
+Completing file lifecycle management and version tracking.
 
-- Trash management
-- Deleted file and folder listing
+### 🔄 Planned / In Progress
+
+- Trash management improvements
 - File restoration
-- Folder restoration
-- Permanent file deletion
-- Permanent folder deletion
+- Permanent deletion
 - File versioning
-- File version history
-- Version number tracking
-- File metadata tracking for each version
-- Version history API testing
-- Trash operation testing
-- Permanent deletion testing
+- Version history
+- Version metadata tracking
 - Final backend testing
 
-**Version History Verification:**
-
-![Day 13 – File Version History](docs/day-13/day-13-version-history.png)
-
-**Trash & Restore Verification:**
-
-![Day 13 – Trash Management](docs/day-13/day-13-trash.png)
-
-**Permanent Delete Verification:**
-
-![Day 13 – Permanent Delete](docs/day-13/day-13-permanent-delete.png)
+> 🚧 **Status:** Final implementation and verification phase.
 
 ---
 
-### Day 14 – Deployment & Final Touches
+## 📅 Day 14 — Deployment & Final Touches
 
-**Focus:** Production deployment, responsive improvements, and final verification.
+### 🎯 Focus
 
-Implemented:
+Production deployment, responsiveness, and final verification.
 
-- Prepared frontend for production deployment
-- Configured production environment variables
-- Connected frontend with the deployed backend
-- Deployed frontend using Vercel
-- Improved mobile responsiveness
-- Optimized dashboard layouts
-- Fixed final UI issues
-- Fixed final functionality issues
-- Improved application performance
-- Performed final end-to-end testing
+### 🔄 Planned
 
-**Evidence:**
-
-![Day 14 – Frontend Deployment](docs/day-14/day-14-vercel-deployment.png)
-
-![Day 14 – Responsive Dashboard](docs/day-14/day-14-responsive-dashboard.png)
+- Frontend deployment using Vercel
+- Production environment configuration
+- Mobile responsiveness improvements
+- Final UI fixes
+- Performance improvements
+- End-to-end testing
+- Final deployment verification
 
 ---
 
-## Testing & Verification
+# 🧪 Testing & Verification
 
 VaultDrive was tested throughout development using both automated and manual testing.
 
-### Automated Testing
+### 🧰 Testing Tools
 
-Backend API tests were implemented using **Jest** and **Supertest**.
+| Tool | Purpose |
+|------|---------|
+| 🧪 Jest | Backend unit testing |
+| 🔌 Supertest | API testing |
+| 📮 Postman | Manual API testing |
 
-Final test result:
+### ✅ Automated Test Result
 
 ```text
 Test Suites: 7 passed, 7 total
 Tests:       10 passed, 10 total
+```
+
+All currently implemented backend test suites are passing successfully.
+
+---
+
+# ⚙️ Environment Variables
+
+Create a `.env` file in the frontend root directory:
+
+```env
+VITE_API_URL=your_backend_url
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_publishable_key
+```
+
+> ⚠️ **Important:** Never commit `.env` files, API keys, service-role keys, or other secrets to GitHub.
+
+---
+
+# 🚀 Getting Started
+
+## 1️⃣ Clone the Repositories
+
+```bash
+git clone <backend-repository-url>
+git clone <frontend-repository-url>
+```
+
+---
+
+## 2️⃣ Start the Backend
+
+```bash
+cd VaultDrive-Backend
+npm install
+npm run dev
+```
+
+---
+
+## 3️⃣ Start the Frontend
+
+```bash
+cd VaultDrive-Frontend
+npm install
+npm run dev
+```
+
+The frontend connects to the backend through the `VITE_API_URL` environment variable.
+
+---
+
+# ☁️ Deployment
+
+| Component | Platform |
+|-----------|----------|
+| 🎨 Frontend | Vercel |
+| ⚙️ Backend | Render |
+| 🗄️ Database | Supabase PostgreSQL |
+| 📦 File Storage | Supabase Storage |
+
+---
+
+# 🔒 Security
+
+VaultDrive uses multiple security mechanisms to protect user data and file access.
+
+### Security Measures
+
+- 🔐 JWT authentication
+- 🔑 bcrypt password hashing
+- 🛡️ Protected API routes
+- 👤 User-specific file access
+- 👥 Role-based permissions
+- 🔗 Secure shareable links
+- 🔏 Signed URLs
+- 🌐 Environment-based secret configuration
+- ☁️ Supabase Storage
+
+---
+
+# 📊 Project Status
+
+| Module | Status |
+|--------|:------:|
+| 🔐 Authentication | ✅ |
+| 📤 File Upload | ✅ |
+| 📁 File Management | ✅ |
+| 📂 Folder Management | ✅ |
+| 🔗 Sharing & Permissions | ✅ |
+| 🔎 Search | ✅ |
+| ↕️ Sorting | ✅ |
+| 📄 Pagination | ✅ |
+| 🖼️ Lazy Loading | ✅ |
+| 🎨 Dashboard UI | ✅ |
+| 🌗 Theme Support | ✅ |
+| 📱 Responsive UI | 🔄 |
+| 🗑️ Trash | 🔄 Final Verification |
+| 🕐 File Versioning | 🔄 |
+| 🚀 Frontend Deployment | 🔄 Final Verification |
+
+---
+
+# 🗺️ Roadmap
+
+### ✅ Completed
+
+- [x] Backend setup
+- [x] Database integration
+- [x] Authentication
+- [x] Google OAuth
+- [x] File upload
+- [x] File management
+- [x] Folder organization
+- [x] Sharing & permissions
+- [x] Search
+- [x] Sorting
+- [x] Pagination
+- [x] Lazy loading
+- [x] Dashboard UI
+- [x] Dark / Light mode
+- [x] Backend deployment
+
+### 🚧 Final Phase
+
+- [ ] Complete trash verification
+- [ ] Implement file versioning
+- [ ] Complete final testing
+- [ ] Final mobile responsiveness
+- [ ] Frontend production deployment
+- [ ] End-to-end verification
+
+---
+
+# 👩‍💻 Author
+
+## Ishita Verma
+
+**B.Tech Computer Science Engineering — GNDU '26**
+
+Full Stack Developer | React | Node.js | Express | PostgreSQL
+
+---
+
+<p align="center">
+  <strong>🔐 VaultDrive</strong>
+</p>
+
+<p align="center">
+  Secure your files. Organize your workspace. Access everything from one place.
+</p>
+
+<p align="center">
+  ⭐ Built with React, Node.js, PostgreSQL & Supabase
+</p>
