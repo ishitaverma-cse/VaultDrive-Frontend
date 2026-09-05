@@ -9,13 +9,17 @@ import {
     getFolders,
     getSignedUrl,
     getTrash,
+    permanentlyDeleteItem,
     renameFile,
-    // renameFolder,
+    renameFolder,
+    deleteFolder,
     restoreTrash,
     searchFiles,
     setFilePermission,
     updateFile,
     uploadFile,
+    toggleStarFile,
+    getStarredFiles,
 } from "../services/DriveService";
 
 /* =========================================================
@@ -124,13 +128,10 @@ const iconFor = (file) => {
 };
 
 const normalizeTrash = (data) => {
-    return (
-        data?.items ||
-        data?.trash ||
-        data?.files ||
-        data?.data ||
-        []
-    );
+    return [
+        ...(data?.files || []),
+        ...(data?.folders || []),
+    ];
 };
 
 /* =========================================================
@@ -397,25 +398,27 @@ function FolderTree({
     folders,
     currentFolderId,
     onOpen,
+    onRename,
+    onDelete,
     darkMode,
 }) {
-    const roots = folders.filter(
-        (folder) => folder.parent_folder_id == null
-    );
+    const [openFolderMenu, setOpenFolderMenu] = useState(null);
 
-    const renderChildren = (parentId, depth = 1) => {
-        return folders
-            .filter(
-                (folder) =>
-                    Number(folder.parent_folder_id) === Number(parentId)
-            )
-            .map((folder) => (
-                <div key={folder.id}>
+    const renderFolder = (folder, depth = 0) => {
+        const isActive =
+            Number(currentFolderId) === Number(folder.id);
+
+        return (
+            <div key={folder.id}>
+                <div className="relative flex items-center gap-1">
                     <button
                         type="button"
                         title={folder.name}
-                        onClick={() => onOpen(folder.id)}
-                        className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition ${Number(currentFolderId) === Number(folder.id)
+                        onClick={() => {
+                            setOpenFolderMenu(null);
+                            onOpen(folder.id);
+                        }}
+                        className={`flex min-w-0 flex-1 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition ${isActive
                             ? darkMode
                                 ? "bg-[#211e50] text-[#aaa4ff]"
                                 : "bg-[#efedff] text-[#5d53e9]"
@@ -428,46 +431,100 @@ function FolderTree({
                         }}
                     >
                         <Icon name="folder" size={16} />
+
                         <span className="min-w-0 truncate">
                             {folder.name}
                         </span>
                     </button>
 
-                    {renderChildren(folder.id, depth + 1)}
+                    <div className="relative shrink-0">
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+
+                                setOpenFolderMenu(
+                                    openFolderMenu === folder.id
+                                        ? null
+                                        : folder.id
+                                );
+                            }}
+                            className={`grid h-8 w-8 place-items-center rounded-full transition ${darkMode
+                                ? "text-gray-400 hover:bg-white/10 hover:text-white"
+                                : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                                }`}
+                            aria-label="Folder actions"
+                        >
+                            ⋮
+                        </button>
+
+                        {openFolderMenu === folder.id && (
+                            <div
+                                onClick={(e) => e.stopPropagation()}
+                                className={`absolute right-0 top-9 z-[100] w-40 rounded-xl border p-1.5 shadow-xl ${darkMode
+                                    ? "border-white/10 bg-[#111827]"
+                                    : "border-gray-200 bg-white"
+                                    }`}
+                            >
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenFolderMenu(null);
+                                        onRename(folder);
+                                    }}
+                                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition ${darkMode
+                                        ? "text-gray-200 hover:bg-white/10"
+                                        : "text-gray-700 hover:bg-gray-100"
+                                        }`}
+                                >
+                                    ✏️
+                                    Rename
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenFolderMenu(null);
+                                        onDelete(folder);
+                                    }}
+                                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-red-500 transition hover:bg-red-500/10"
+                                >
+                                    🗑️
+                                    Delete
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
-            ));
+
+                {folders
+                    .filter(
+                        (child) =>
+                            Number(child.parent_folder_id) ===
+                            Number(folder.id)
+                    )
+                    .map((child) =>
+                        renderFolder(child, depth + 1)
+                    )}
+            </div>
+        );
     };
 
-    return (
-        <div className="mt-1 max-h-[38vh] overflow-y-auto pr-1">
-            {roots.map((folder) => (
-                <div key={folder.id}>
-                    <button
-                        type="button"
-                        title={folder.name}
-                        onClick={() => onOpen(folder.id)}
-                        className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition ${Number(currentFolderId) === Number(folder.id)
-                            ? darkMode
-                                ? "bg-[#211e50] text-[#aaa4ff]"
-                                : "bg-[#efedff] text-[#5d53e9]"
-                            : darkMode
-                                ? "text-[#96a2b7] hover:bg-[#111b2d] hover:text-white"
-                                : "text-gray-600 hover:bg-gray-100"
-                            }`}
-                    >
-                        <Icon name="folder" size={16} />
-                        <span className="min-w-0 truncate">
-                            {folder.name}
-                        </span>
-                    </button>
+    const roots = folders.filter(
+        (folder) => folder.parent_folder_id == null
+    );
 
-                    {renderChildren(folder.id)}
-                </div>
-            ))}
+    return (
+        <div className="mt-1 overflow-visible pr-1">
+            {roots.map((folder) => renderFolder(folder))}
 
             {roots.length === 0 && (
                 <p
-                    className={`px-3 py-2 text-xs ${darkMode ? "text-[#5e6b82]" : "text-gray-400"
+                    className={`px-3 py-2 text-xs ${darkMode
+                        ? "text-[#5e6b82]"
+                        : "text-gray-400"
                         }`}
                 >
                     No folders yet
@@ -496,6 +553,7 @@ export default function Dashboard() {
     const [folders, setFolders] = useState([]);
     const [files, setFiles] = useState([]);
     const [trash, setTrash] = useState([]);
+    const [starredFiles, setStarredFiles] = useState([]);
 
     const [view, setView] = useState("drive");
     const [currentFolderId, setCurrentFolderId] = useState(null);
@@ -531,6 +589,7 @@ export default function Dashboard() {
     const [permissionLoading, setPermissionLoading] = useState(false);
 
     const [deleteFileTarget, setDeleteFileTarget] = useState(null);
+    const [permanentDeleteTarget, setPermanentDeleteTarget] = useState(null);
 
     const [renameFileTarget, setRenameFileTarget] = useState(null);
     const [renameFileName, setRenameFileName] = useState("");
@@ -550,6 +609,17 @@ export default function Dashboard() {
     const user = JSON.parse(
         localStorage.getItem("user") || "{}"
     );
+
+    const [createFolderModal, setCreateFolderModal] = useState(false);
+    const [newFolderName, setNewFolderName] = useState("");
+
+    const [renameFolderTarget, setRenameFolderTarget] = useState(null);
+    const [renameFolderName, setRenameFolderName] = useState("");
+    const [deleteFolderTarget, setDeleteFolderTarget] = useState(null);
+
+    const [folderActionLoading, setFolderActionLoading] = useState(false);
+
+    const [showAccountModal, setShowAccountModal] = useState(false);
 
     /* =====================================================
        THEME
@@ -668,6 +738,7 @@ export default function Dashboard() {
 
         if (searchResults !== null) {
             list = [...searchResults];
+
         } else if (view === "recent") {
             list = [...files].sort(
                 (a, b) =>
@@ -684,6 +755,10 @@ export default function Dashboard() {
             );
 
             list = list.slice(0, 20);
+
+        } else if (view === "starred") {
+            list = [...starredFiles];
+
         } else if (view === "drive") {
             if (currentFolderId === null) {
                 // My Drive = only files that are not inside a folder
@@ -741,6 +816,7 @@ export default function Dashboard() {
         return list;
     }, [
         files,
+        starredFiles,
         currentFolderId,
         searchResults,
         view,
@@ -767,35 +843,40 @@ export default function Dashboard() {
        CREATE FOLDER
     ===================================================== */
 
-    const handleCreateFolder = async () => {
-        const name = window.prompt(
-            "Enter folder name:"
-        );
+    const handleCreateFolder = () => {
+        setNewFolderName("");
+        setCreateFolderModal(true);
+    };
 
-        if (!name?.trim()) return;
+    const confirmCreateFolder = async () => {
+        const name = newFolderName.trim();
+
+        if (!name) {
+            showToast("Please enter a folder name.", "error");
+            return;
+        }
 
         try {
+            setFolderActionLoading(true);
+
             await createFolder({
-                name: name.trim(),
-                ...(currentFolderId !== null
-                    ? {
-                        parent_folder_id:
-                            currentFolderId,
-                    }
-                    : {}),
+                name,
+                parent_folder_id: currentFolderId || null,
             });
 
             await refresh();
 
-            showToast(
-                "Folder created successfully."
-            );
+            setCreateFolderModal(false);
+            setNewFolderName("");
+
+            showToast("Folder created successfully.");
         } catch (err) {
             showToast(
-                err.response?.data?.message ||
-                "Failed to create folder.",
+                err.response?.data?.message || "Failed to create folder.",
                 "error"
             );
+        } finally {
+            setFolderActionLoading(false);
         }
     };
 
@@ -868,6 +949,32 @@ export default function Dashboard() {
             showToast(
                 err.response?.data?.message ||
                 "Failed to load preview.",
+                "error"
+            );
+        }
+    };
+
+    /* =====================================================
+      STARRED
+   ===================================================== */
+    const handleToggleStar = async (file) => {
+        try {
+            const response = await toggleStarFile(file.id);
+
+            await refresh();
+
+            if (view === "starred") {
+                await loadStarred();
+            }
+
+            showToast(
+                response.data.file.starred
+                    ? "File starred successfully."
+                    : "File unstarred successfully."
+            );
+        } catch (err) {
+            showToast(
+                err.response?.data?.message || "Failed to update starred status.",
                 "error"
             );
         }
@@ -973,6 +1080,113 @@ export default function Dashboard() {
         }
     };
 
+    const confirmPermanentDelete = async () => {
+        if (!permanentDeleteTarget) return;
+
+        const item = permanentDeleteTarget;
+
+        const type =
+            item.type ||
+            item.resource_type ||
+            item.item_type ||
+            (item.parent_folder_id !== undefined
+                ? "folder"
+                : "file");
+
+        try {
+            await permanentlyDeleteItem(type, item.id);
+
+            await loadTrash();
+
+            setPermanentDeleteTarget(null);
+
+            showToast("Item permanently deleted.");
+        } catch (err) {
+            showToast(
+                err.response?.data?.message ||
+                "Failed to permanently delete item.",
+                "error"
+            );
+        }
+    };
+
+    /* =====================================================
+    RENAME & DELETE FOLDERS
+ ===================================================== */
+
+    const handleRenameFolder = (folder) => {
+        setRenameFolderTarget(folder);
+        setRenameFolderName(folder.name || "");
+    };
+
+    const confirmRenameFolder = async () => {
+        const name = renameFolderName.trim();
+
+        if (!name) {
+            showToast("Please enter a folder name.", "error");
+            return;
+        }
+
+        if (name === renameFolderTarget.name) {
+            setRenameFolderTarget(null);
+            return;
+        }
+
+        try {
+            setFolderActionLoading(true);
+
+            await renameFolder(renameFolderTarget.id, name);
+            await refresh();
+
+            setRenameFolderTarget(null);
+            setRenameFolderName("");
+
+            showToast("Folder renamed successfully.");
+        } catch (err) {
+            showToast(
+                err.response?.data?.message || "Failed to rename folder.",
+                "error"
+            );
+        } finally {
+            setFolderActionLoading(false);
+        }
+    };
+
+    const handleDeleteFolder = (folder) => {
+        setDeleteFolderTarget(folder);
+    };
+
+    const confirmDeleteFolder = async () => {
+        if (!deleteFolderTarget) return;
+
+        try {
+            setFolderActionLoading(true);
+
+            await deleteFolder(deleteFolderTarget.id);
+
+            if (
+                Number(currentFolderId) ===
+                Number(deleteFolderTarget.id)
+            ) {
+                setView("drive");
+                setCurrentFolderId(null);
+            }
+
+            await refresh();
+
+            setDeleteFolderTarget(null);
+
+            showToast("Folder moved to Trash.");
+        } catch (err) {
+            showToast(
+                err.response?.data?.message || "Failed to delete folder.",
+                "error"
+            );
+        } finally {
+            setFolderActionLoading(false);
+        }
+    };
+
     /* =====================================================
        SHARE
     ===================================================== */
@@ -1056,6 +1270,18 @@ export default function Dashboard() {
        TRASH
     ===================================================== */
 
+    const loadStarred = async () => {
+        try {
+            const response = await getStarredFiles();
+            setStarredFiles(response.data.files || []);
+        } catch (err) {
+            showToast(
+                err.response?.data?.message || "Failed to load starred files.",
+                "error"
+            );
+        }
+    };
+
     const loadTrash = async () => {
         try {
             const response = await getTrash();
@@ -1111,6 +1337,11 @@ export default function Dashboard() {
         }
     };
 
+    const handlePermanentDelete = (item) => {
+        setOpenMenu(null);
+        setPermanentDeleteTarget(item);
+    };
+
     /* =====================================================
        NAVIGATION
     ===================================================== */
@@ -1136,11 +1367,14 @@ export default function Dashboard() {
         setSearchResults(null);
     };
 
-    const openStarred = () => {
+    const openStarred = async () => {
         setView("starred");
         setCurrentFolderId(null);
         setSearchQuery("");
         setSearchResults(null);
+        setCurrentPage(1);
+
+        await loadStarred();
     };
 
     const openShared = () => {
@@ -1448,10 +1682,14 @@ export default function Dashboard() {
 
                         <button
                             type="button"
-                            disabled
-                            className={`flex w-full cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium opacity-50 ${darkMode
-                                ? "text-[#8d9ab0]"
-                                : "text-gray-500"
+                            onClick={openStarred}
+                            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${view === "starred"
+                                ? darkMode
+                                    ? "bg-[#211e50] text-[#aaa4ff]"
+                                    : "bg-[#efedff] text-[#5d53e9]"
+                                : darkMode
+                                    ? "text-[#b8c2d4] hover:bg-white/5 hover:text-white"
+                                    : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                                 }`}
                         >
                             <Icon name="star" size={18} />
@@ -1505,7 +1743,6 @@ export default function Dashboard() {
                     />
 
                     {/* FOLDERS */}
-
                     <div className="px-3">
                         <div className="flex items-center justify-between px-3">
                             <p
@@ -1537,10 +1774,10 @@ export default function Dashboard() {
 
                         <FolderTree
                             folders={folders}
-                            currentFolderId={
-                                currentFolderId
-                            }
+                            currentFolderId={currentFolderId}
                             onOpen={openFolder}
+                            onRename={handleRenameFolder}
+                            onDelete={handleDeleteFolder}
                             darkMode={darkMode}
                         />
                     </div>
@@ -1566,25 +1803,15 @@ export default function Dashboard() {
                             Trash
                         </button>
 
-
-
                         <button
                             type="button"
-                            onClick={() =>
-                                showToast(
-                                    "Account settings can be added next.",
-                                    "info"
-                                )
-                            }
-                            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium ${darkMode
-                                ? "text-[#8d9ab0] hover:bg-[#111b2d] hover:text-white"
-                                : "text-gray-600 hover:bg-gray-100"
+                            onClick={() => setShowAccountModal(true)}
+                            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${darkMode
+                                ? "text-[#b8c2d4] hover:bg-white/5 hover:text-white"
+                                : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                                 }`}
                         >
-                            <Icon
-                                name="user"
-                                size={18}
-                            />
+                            <Icon name="user" size={18} />
                             Account
                         </button>
                     </div>
@@ -1678,10 +1905,17 @@ export default function Dashboard() {
 
                                 <button
                                     type="button"
-                                    disabled
-                                    className={`flex w-full cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium opacity-50 ${darkMode
-                                        ? "text-[#8d9ab0]"
-                                        : "text-gray-500"
+                                    onClick={() => {
+                                        openStarred();
+                                        setMobileSidebarOpen(false);
+                                    }}
+                                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${view === "starred"
+                                        ? darkMode
+                                            ? "bg-[#211e50] text-[#aaa4ff]"
+                                            : "bg-[#efedff] text-[#5d53e9]"
+                                        : darkMode
+                                            ? "text-gray-300 hover:bg-[#111b2d] hover:text-white cursor-pointer"
+                                            : "text-gray-700 hover:bg-gray-100 hover:text-gray-900 cursor-pointer"
                                         }`}
                                 >
                                     <Icon name="star" size={18} />
@@ -1772,6 +2006,8 @@ export default function Dashboard() {
                                         openFolder(folderId);
                                         setMobileSidebarOpen(false);
                                     }}
+                                    onRename={handleRenameFolder}
+                                    onDelete={handleDeleteFolder}
                                     darkMode={darkMode}
                                 />
                             </div>
@@ -1800,15 +2036,13 @@ export default function Dashboard() {
 
                                 <button
                                     type="button"
-                                    onClick={() =>
-                                        showToast(
-                                            "Account settings can be added next.",
-                                            "info"
-                                        )
-                                    }
-                                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium ${darkMode
-                                        ? "text-[#8d9ab0] hover:bg-[#111b2d] hover:text-white"
-                                        : "text-gray-600 hover:bg-gray-100"
+                                    onClick={() => {
+                                        setShowAccountModal(true);
+                                        setMobileSidebarOpen(false);
+                                    }}
+                                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${darkMode
+                                        ? "text-[#b8c2d4] hover:bg-white/5 hover:text-white"
+                                        : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                                         }`}
                                 >
                                     <Icon name="user" size={18} />
@@ -2161,79 +2395,70 @@ export default function Dashboard() {
                                                         </p>
                                                     </div>
 
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            handleRestore(
-                                                                item
-                                                            )
-                                                        }
-                                                        className="flex items-center justify-center gap-2 rounded-lg border border-[#6559ff] px-3 py-2 text-xs font-bold text-[#8d86ff] transition hover:bg-[#6559ff]/10"
-                                                    >
-                                                        <Icon
-                                                            name="restore"
-                                                            size={
-                                                                15
-                                                            }
-                                                        />
-                                                        Restore
-                                                    </button>
+                                                    <div className="relative">
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setOpenMenu(openMenu === item.id ? null : item.id);
+                                                            }}
+                                                            className={`grid h-9 w-9 place-items-center rounded-full transition ${darkMode
+                                                                ? "text-gray-400 hover:bg-white/10 hover:text-white"
+                                                                : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                                                                }`}
+                                                            aria-label="File actions"
+                                                        >
+                                                            ⋮
+                                                        </button>
+
+                                                        {openMenu === item.id && (
+                                                            <div
+                                                                className={`absolute right-0 top-11 z-50 w-48 rounded-xl border p-1.5 shadow-xl ${darkMode
+                                                                    ? "border-white/10 bg-[#111827]"
+                                                                    : "border-gray-200 bg-white"
+                                                                    }`}
+                                                            >
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={async (e) => {
+                                                                        e.stopPropagation();
+                                                                        setOpenMenu(null);
+                                                                        await handleRestore(item);
+                                                                    }}
+                                                                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition ${darkMode
+                                                                        ? "text-gray-200 hover:bg-white/10"
+                                                                        : "text-gray-700 hover:bg-gray-100"
+                                                                        }`}
+                                                                >
+                                                                    <Icon name="restore" size={15} />
+                                                                    Restore
+                                                                </button>
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={async (e) => {
+                                                                        e.stopPropagation();
+                                                                        handlePermanentDelete(item);
+                                                                    }}
+                                                                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-red-500 transition hover:bg-red-500/10"
+                                                                >
+                                                                    <Icon name="trash" size={15} />
+                                                                    Delete permanently
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
                                                 </div>
                                             )
                                         )}
                                     </div>
                                 )}
                             </section>
-                        ) : view ===
-                            "starred" ||
-                            view ===
-                            "shared" ? (
-                            /* =================================================
-                               STARRED / SHARED PLACEHOLDER
-                            ================================================= */
-
-                            <div
-                                className={`flex min-h-[310px] flex-col items-center justify-center rounded-2xl border text-center ${darkMode
-                                    ? "border-[#202d42] bg-[#0d1524]"
-                                    : "border-gray-200 bg-white"
-                                    }`}
-                            >
-                                <div className="mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-[#191f31] text-[#858fa3]">
-                                    <Icon
-                                        name={
-                                            view ===
-                                                "starred"
-                                                ? "star"
-                                                : "shared"
-                                        }
-                                        size={24}
-                                    />
-                                </div>
-
-                                <h2 className="text-lg font-semibold">
-                                    {view ===
-                                        "starred"
-                                        ? "No starred files yet"
-                                        : "No shared files yet"}
-                                </h2>
-
-                                <p
-                                    className={`mt-2 max-w-md px-4 text-sm leading-6 ${darkMode
-                                        ? "text-[#748198]"
-                                        : "text-gray-500"
-                                        }`}
-                                >
-                                    {view ===
-                                        "starred"
-                                        ? "Starred-file persistence needs a dedicated backend field/API. We won't fake it with temporary UI state."
-                                        : "Shared-with-me needs a dedicated backend query for permissions received by your account."}
-                                </p>
-                            </div>
                         ) : (
                             /* =================================================
                                FILES
                             ================================================= */
-
                             <section>
                                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                     <div>
@@ -2452,6 +2677,25 @@ export default function Dashboard() {
                                                             }`
                                                     }
                                                 >
+                                                    {/* STAR BUTTON */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleToggleStar(file);
+                                                        }}
+                                                        className={`absolute right-3 top-3 z-20 grid h-9 w-9 place-items-center rounded-full border backdrop-blur-sm transition ${darkMode
+                                                            ? "border-white/10 bg-[#111827]/90 text-[#9aa5b8] hover:bg-[#1a2435] hover:text-yellow-400"
+                                                            : "border-gray-200 bg-white/90 text-gray-400 hover:bg-gray-50 hover:text-yellow-500"
+                                                            }`}
+                                                        title={file.starred ? "Unstar" : "Star"}
+                                                        aria-label={file.starred ? "Unstar file" : "Star file"}
+                                                    >
+                                                        <span className="text-lg leading-none">
+                                                            {file.starred ? "★" : "☆"}
+                                                        </span>
+                                                    </button>
+
                                                     {/* FILE PREVIEW / ICON */}
                                                     <button
                                                         type="button"
@@ -2639,7 +2883,7 @@ export default function Dashboard() {
 
                                                             {openMenu === file.id && (
                                                                 <div
-                                                                    className={`absolute right-0 z-50 mt-2 w-44 overflow-hidden rounded-xl border py-1 shadow-xl ${darkMode
+                                                                    className={`absolute right-0 z-50 -translate-y-40 mt-2 w-44 overflow-hidden rounded-xl border py-1 shadow-xl ${darkMode
                                                                         ? "border-white/10 bg-[#151d2d]"
                                                                         : "border-gray-200 bg-white"
                                                                         }`}
@@ -2744,8 +2988,8 @@ export default function Dashboard() {
                                     <div className="mt-8 flex items-center justify-center">
                                         <div
                                             className={`flex items-center gap-1 rounded-xl p-1 ${darkMode
-                                                    ? "bg-[#0d1524]"
-                                                    : "bg-gray-50"
+                                                ? "bg-[#0d1524]"
+                                                : "bg-gray-50"
                                                 }`}
                                         >
                                             {/* Previous */}
@@ -2756,10 +3000,10 @@ export default function Dashboard() {
                                                 }
                                                 disabled={currentPage === 1}
                                                 className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg transition ${currentPage === 1
-                                                        ? "cursor-not-allowed opacity-30"
-                                                        : darkMode
-                                                            ? "text-[#78859b] hover:bg-white/5 hover:text-white"
-                                                            : "text-gray-400 hover:bg-white hover:text-gray-900"
+                                                    ? "cursor-not-allowed opacity-30"
+                                                    : darkMode
+                                                        ? "text-[#78859b] hover:bg-white/5 hover:text-white"
+                                                        : "text-gray-400 hover:bg-white hover:text-gray-900"
                                                     }`}
                                                 aria-label="Previous page"
                                             >
@@ -2776,10 +3020,10 @@ export default function Dashboard() {
                                                         type="button"
                                                         onClick={() => setCurrentPage(page)}
                                                         className={`flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-sm transition ${currentPage === page
-                                                                ? "bg-[#6c5ce7] font-semibold text-white"
-                                                                : darkMode
-                                                                    ? "text-[#78859b] hover:bg-white/5 hover:text-white"
-                                                                    : "text-gray-500 hover:bg-white hover:text-gray-900"
+                                                            ? "bg-[#6c5ce7] font-semibold text-white"
+                                                            : darkMode
+                                                                ? "text-[#78859b] hover:bg-white/5 hover:text-white"
+                                                                : "text-gray-500 hover:bg-white hover:text-gray-900"
                                                             }`}
                                                     >
                                                         {page}
@@ -2797,10 +3041,10 @@ export default function Dashboard() {
                                                 }
                                                 disabled={currentPage === totalPages}
                                                 className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg transition ${currentPage === totalPages
-                                                        ? "cursor-not-allowed opacity-30"
-                                                        : darkMode
-                                                            ? "text-[#78859b] hover:bg-white/5 hover:text-white"
-                                                            : "text-gray-400 hover:bg-white hover:text-gray-900"
+                                                    ? "cursor-not-allowed opacity-30"
+                                                    : darkMode
+                                                        ? "text-[#78859b] hover:bg-white/5 hover:text-white"
+                                                        : "text-gray-400 hover:bg-white hover:text-gray-900"
                                                     }`}
                                                 aria-label="Next page"
                                             >
@@ -3583,6 +3827,451 @@ export default function Dashboard() {
                                     : "Save permission"}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {permanentDeleteTarget && (
+                <div className="fixed inset-0 z-[100] grid place-items-center bg-black/60 px-4 backdrop-blur-sm">
+                    <div
+                        className={`w-full max-w-md rounded-2xl border p-6 shadow-2xl ${darkMode
+                            ? "border-white/10 bg-[#151d2d]"
+                            : "border-gray-200 bg-white"
+                            }`}
+                    >
+                        <div className="mb-5 flex items-start gap-4">
+                            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-red-500/10 text-red-500">
+                                <Icon name="trash" size={20} />
+                            </div>
+
+                            <div>
+                                <h3
+                                    className={`text-lg font-bold ${darkMode
+                                        ? "text-white"
+                                        : "text-gray-900"
+                                        }`}
+                                >
+                                    Delete permanently?
+                                </h3>
+
+                                <p
+                                    className={`mt-1 text-sm leading-6 ${darkMode
+                                        ? "text-[#8b96a9]"
+                                        : "text-gray-500"
+                                        }`}
+                                >
+                                    "{permanentDeleteTarget.name}" will be
+                                    permanently deleted. This action cannot be
+                                    undone.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setPermanentDeleteTarget(null)
+                                }
+                                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${darkMode
+                                    ? "text-[#aab3c2] hover:bg-white/5"
+                                    : "text-gray-600 hover:bg-gray-100"
+                                    }`}
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={confirmPermanentDelete}
+                                className="rounded-lg bg-red-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-600"
+                            >
+                                Delete permanently
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {createFolderModal && (
+                <div
+                    className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
+                    onClick={() => {
+                        if (!folderActionLoading) {
+                            setCreateFolderModal(false);
+                        }
+                    }}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        className={`w-full max-w-md rounded-2xl border p-6 shadow-2xl ${darkMode
+                            ? "border-white/10 bg-[#111827]"
+                            : "border-gray-200 bg-white"
+                            }`}
+                    >
+                        <h2
+                            className={`text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"
+                                }`}
+                        >
+                            Create new folder
+                        </h2>
+
+                        <p
+                            className={`mt-1 text-sm ${darkMode ? "text-gray-400" : "text-gray-500"
+                                }`}
+                        >
+                            Enter a name for your new folder.
+                        </p>
+
+                        <input
+                            autoFocus
+                            type="text"
+                            value={newFolderName}
+                            onChange={(e) => setNewFolderName(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    confirmCreateFolder();
+                                }
+                            }}
+                            placeholder="Folder name"
+                            className={`mt-5 w-full rounded-xl border px-4 py-3 text-sm outline-none ${darkMode
+                                ? "border-white/10 bg-[#0b1220] text-white placeholder:text-gray-500"
+                                : "border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400"
+                                }`}
+                        />
+
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setCreateFolderModal(false)}
+                                className={`rounded-xl px-4 py-2.5 text-sm ${darkMode
+                                    ? "text-gray-300 hover:bg-white/10"
+                                    : "text-gray-600 hover:bg-gray-100"
+                                    }`}
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={confirmCreateFolder}
+                                disabled={folderActionLoading}
+                                className="rounded-xl bg-[#6258e8] px-5 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+                            >
+                                {folderActionLoading ? "Creating..." : "Create folder"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {renameFolderTarget && (
+                <div
+                    className="fixed inset-0 z-[9999] flex min-h-screen items-center justify-center overflow-y-auto bg-black/50 px-4 py-6 backdrop-blur-sm"
+                    onClick={() => {
+                        if (!folderActionLoading) {
+                            setRenameFolderTarget(null);
+                        }
+                    }}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        className={`w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border p-6 shadow-2xl ${darkMode
+                            ? "border-white/10 bg-[#111827]"
+                            : "border-gray-200 bg-white"
+                            }`}
+                    >
+                        <h2
+                            className={`text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"
+                                }`}
+                        >
+                            Rename folder
+                        </h2>
+
+                        <p
+                            className={`mt-1 text-sm ${darkMode ? "text-gray-400" : "text-gray-500"
+                                }`}
+                        >
+                            Enter a new name for "{renameFolderTarget.name}".
+                        </p>
+
+                        <input
+                            autoFocus
+                            type="text"
+                            value={renameFolderName}
+                            onChange={(e) => setRenameFolderName(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    confirmRenameFolder();
+                                }
+                            }}
+                            className={`mt-5 w-full rounded-xl border px-4 py-3 text-sm outline-none transition ${darkMode
+                                ? "border-white/10 bg-[#0b1220] text-white focus:border-[#6d63ff]"
+                                : "border-gray-200 bg-gray-50 text-gray-900 focus:border-[#6d63ff]"
+                                }`}
+                        />
+
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                disabled={folderActionLoading}
+                                onClick={() => setRenameFolderTarget(null)}
+                                className={`rounded-xl px-4 py-2.5 text-sm font-medium transition ${darkMode
+                                    ? "text-gray-300 hover:bg-white/10"
+                                    : "text-gray-600 hover:bg-gray-100"
+                                    }`}
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                disabled={folderActionLoading}
+                                onClick={confirmRenameFolder}
+                                className="rounded-xl bg-[#6258e8] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#554bd8] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {folderActionLoading ? "Saving..." : "Rename"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {deleteFolderTarget && (
+                <div
+                    className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
+                    onClick={() => {
+                        if (!folderActionLoading) {
+                            setDeleteFolderTarget(null);
+                        }
+                    }}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        className={`w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border p-6 shadow-2xl ${darkMode
+                            ? "border-white/10 bg-[#111827]"
+                            : "border-gray-200 bg-white"
+                            }`}
+                    >
+                        <div className="flex items-start gap-4">
+                            <div
+                                className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${darkMode
+                                    ? "bg-red-500/10 text-red-400"
+                                    : "bg-red-50 text-red-500"
+                                    }`}
+                            >
+                                <Icon name="trash" size={20} />
+                            </div>
+
+                            <div>
+                                <h2
+                                    className={`text-lg font-semibold ${darkMode
+                                        ? "text-white"
+                                        : "text-gray-900"
+                                        }`}
+                                >
+                                    Delete folder?
+                                </h2>
+
+                                <p
+                                    className={`mt-1 text-sm leading-6 ${darkMode
+                                        ? "text-gray-400"
+                                        : "text-gray-500"
+                                        }`}
+                                >
+                                    Are you sure you want to move{" "}
+                                    <span
+                                        className={`font-medium ${darkMode
+                                            ? "text-gray-200"
+                                            : "text-gray-700"
+                                            }`}
+                                    >
+                                        "{deleteFolderTarget.name}"
+                                    </span>{" "}
+                                    to Trash?
+                                </p>
+                            </div>
+                        </div>
+
+                        <div
+                            className={`mt-5 rounded-xl px-4 py-3 text-sm ${darkMode
+                                ? "bg-white/5 text-gray-400"
+                                : "bg-gray-50 text-gray-500"
+                                }`}
+                        >
+                            You can restore it later from the Trash section.
+                        </div>
+
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                disabled={folderActionLoading}
+                                onClick={() => setDeleteFolderTarget(null)}
+                                className={`rounded-xl px-4 py-2.5 text-sm font-medium transition ${darkMode
+                                    ? "text-gray-300 hover:bg-white/10"
+                                    : "text-gray-600 hover:bg-gray-100"
+                                    }`}
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                disabled={folderActionLoading}
+                                onClick={confirmDeleteFolder}
+                                className="rounded-xl bg-red-500 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {folderActionLoading
+                                    ? "Deleting..."
+                                    : "Move to Trash"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showAccountModal && (
+                <div
+                    className="fixed inset-0 z-[200] grid place-items-center bg-black/60 px-4 backdrop-blur-sm"
+                    onClick={() => setShowAccountModal(false)}
+                >
+                    <div
+                        onClick={(event) => event.stopPropagation()}
+                        className={`w-full max-w-md rounded-2xl border p-6 shadow-2xl ${darkMode
+                            ? "border-[#263148] bg-[#0d1524]"
+                            : "border-gray-200 bg-white"
+                            }`}
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h2
+                                    className={`text-xl font-semibold ${darkMode
+                                        ? "text-white"
+                                        : "text-gray-900"
+                                        }`}
+                                >
+                                    Account
+                                </h2>
+
+                                <p
+                                    className={`mt-1 text-sm ${darkMode
+                                        ? "text-[#748198]"
+                                        : "text-gray-500"
+                                        }`}
+                                >
+                                    Your VaultDrive account information.
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setShowAccountModal(false)}
+                                className={`grid h-9 w-9 place-items-center rounded-lg transition ${darkMode
+                                    ? "text-[#8d9ab0] hover:bg-white/10 hover:text-white"
+                                    : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                                    }`}
+                                aria-label="Close account"
+                            >
+                                <Icon name="close" size={18} />
+                            </button>
+                        </div>
+
+                        {/* Profile summary */}
+                        <div
+                            className={`mt-6 rounded-xl border p-4 ${darkMode
+                                ? "border-[#263148] bg-[#101929]"
+                                : "border-gray-200 bg-gray-50"
+                                }`}
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[#6559ff] text-xl font-bold text-white">
+                                    {user.name?.charAt(0)?.toUpperCase() || "U"}
+                                </div>
+
+                                <div className="min-w-0">
+                                    <p
+                                        className={`truncate text-base font-semibold ${darkMode
+                                            ? "text-white"
+                                            : "text-gray-900"
+                                            }`}
+                                    >
+                                        {user.name || "User"}
+                                    </p>
+
+                                    <p
+                                        className={`mt-1 truncate text-sm ${darkMode
+                                            ? "text-[#748198]"
+                                            : "text-gray-500"
+                                            }`}
+                                    >
+                                        {user.email || "No email available"}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Account details */}
+                        <div className="mt-5 space-y-3">
+                            <div
+                                className={`rounded-xl border px-4 py-3 ${darkMode
+                                    ? "border-[#263148]"
+                                    : "border-gray-200"
+                                    }`}
+                            >
+                                <p
+                                    className={`text-[10px] font-bold uppercase tracking-[0.16em] ${darkMode
+                                        ? "text-[#68758b]"
+                                        : "text-gray-400"
+                                        }`}
+                                >
+                                    Name
+                                </p>
+
+                                <p
+                                    className={`mt-1 text-sm font-medium ${darkMode
+                                        ? "text-[#dce2ec]"
+                                        : "text-gray-800"
+                                        }`}
+                                >
+                                    {user.name || "User"}
+                                </p>
+                            </div>
+
+                            <div
+                                className={`rounded-xl border px-4 py-3 ${darkMode
+                                    ? "border-[#263148]"
+                                    : "border-gray-200"
+                                    }`}
+                            >
+                                <p
+                                    className={`text-[10px] font-bold uppercase tracking-[0.16em] ${darkMode
+                                        ? "text-[#68758b]"
+                                        : "text-gray-400"
+                                        }`}
+                                >
+                                    Email
+                                </p>
+
+                                <p
+                                    className={`mt-1 truncate text-sm font-medium ${darkMode
+                                        ? "text-[#dce2ec]"
+                                        : "text-gray-800"
+                                        }`}
+                                >
+                                    {user.email || "No email available"}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <button
+                            type="button"
+                            onClick={() => setShowAccountModal(false)}
+                            className="mt-6 w-full rounded-xl bg-[#6559ff] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#7167ff]"
+                        >
+                            Done
+                        </button>
                     </div>
                 </div>
             )}

@@ -32,6 +32,34 @@ export function createFolder(data) {
     });
 }
 
+export function renameFolder(folderId, name) {
+    const token = localStorage.getItem("token");
+
+    return axios.post(
+        `${BASE_URL}/api/folders/${folderId}/rename`,
+        { name },
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
+
+export function deleteFolder(folderId) {
+    const token = localStorage.getItem("token");
+
+    return axios.post(
+        `${BASE_URL}/api/folders/${folderId}/delete`,
+        null,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
+
 export function updateFile(fileId, data) {
     const token = localStorage.getItem("token");
 
@@ -154,6 +182,46 @@ export function restoreTrash(type, itemId) {
     return axios.post(
         `${BASE_URL}/api/trash/${type}/${itemId}/restore`,
         {},
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
+
+export function permanentlyDeleteItem(type, itemId) {
+    const token = localStorage.getItem("token");
+
+    return axios.delete(
+        `${BASE_URL}/api/trash/${type}/${itemId}/permanent`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
+
+export function toggleStarFile(fileId) {
+    const token = localStorage.getItem("token");
+
+    return axios.post(
+        `${BASE_URL}/api/files/${fileId}/star`,
+        {},
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
+
+export function getStarredFiles() {
+    const token = localStorage.getItem("token");
+
+    return axios.get(
+        `${BASE_URL}/api/files/starred`,
         {
             headers: {
                 Authorization: `Bearer ${token}`

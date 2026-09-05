@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { loginUser } from "../services/AuthService";
+import axios from "axios";
+import { supabase } from "../lib/supabase";
 
 export default function Login() {
     const navigate = useNavigate();
+
+    const BASE_URL = import.meta.env.VITE_API_URL;
 
     const [darkMode, setDarkMode] = useState(() => {
         const savedTheme = localStorage.getItem("vaultdrive-theme");
@@ -22,6 +26,84 @@ export default function Login() {
             window.removeEventListener("storage", handleStorage);
         };
     }, []);
+
+    useEffect(() => {
+        const handleGoogleCallback = async () => {
+            const code = new URLSearchParams(window.location.search).get("code");
+
+            if (!code) {
+                return;
+            }
+
+            try {
+                setLoading(true);
+                setServerError("");
+
+                // Exchange Google's OAuth code for a Supabase session
+                const { data, error } =
+                    await supabase.auth.exchangeCodeForSession(code);
+
+                if (error) {
+                    console.error("Google code exchange error:", error);
+                    setServerError(error.message);
+                    return;
+                }
+
+                const session = data.session;
+
+                if (!session?.access_token) {
+                    setServerError("Google authentication session not found.");
+                    return;
+                }
+
+                // Send Supabase access token to VaultDrive backend
+                const response = await axios.post(
+                    `${BASE_URL}/api/auth/google`,
+                    {
+                        access_token: session.access_token
+                    }
+                );
+
+                // Store VaultDrive JWT
+                localStorage.setItem(
+                    "token",
+                    response.data.token
+                );
+
+                if (response.data.user) {
+                    localStorage.setItem(
+                        "user",
+                        JSON.stringify(response.data.user)
+                    );
+                }
+
+                // Clear Supabase session because VaultDrive uses its own JWT
+                await supabase.auth.signOut();
+
+                // Remove ?code=... from the URL
+                window.history.replaceState(
+                    {},
+                    document.title,
+                    window.location.pathname
+                );
+
+                navigate("/dashboard");
+
+            } catch (error) {
+                console.error("Google authentication error:", error);
+
+                setServerError(
+                    error.response?.data?.message ||
+                    error.message ||
+                    "Unable to sign in with Google."
+                );
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        handleGoogleCallback();
+    }, [navigate]);
 
     const [form, setForm] = useState({
         email: "",
@@ -96,36 +178,52 @@ export default function Login() {
         } catch (error) {
             setServerError(
                 error.response?.data?.message ||
-                    "Unable to sign in. Please check your email and password."
+                "Unable to sign in. Please check your email and password."
             );
         } finally {
             setLoading(false);
         }
     };
 
+    const handleGoogleLogin = async () => {
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: "google",
+                options: {
+                    redirectTo: `${window.location.origin}/login`
+                }
+            });
+
+            if (error) {
+                console.error("Google login error:", error);
+                setServerError(error.message);
+            }
+        } catch (error) {
+            console.error("Google login error:", error);
+            setServerError("Failed to start Google login.");
+        }
+    };
+
     return (
         <div
-            className={`min-h-screen px-4 py-6 transition-colors duration-300 sm:px-6 lg:px-8 ${
-                darkMode
-                    ? "bg-[#070b16] text-white"
-                    : "bg-[#f7f8fc] text-gray-900"
-            }`}
+            className={`min-h-screen px-4 py-6 transition-colors duration-300 sm:px-6 lg:px-8 ${darkMode
+                ? "bg-[#070b16] text-white"
+                : "bg-[#f7f8fc] text-gray-900"
+                }`}
         >
             <div className="mx-auto flex min-h-[calc(100vh-48px)] max-w-[1180px] items-center">
                 <div
-                    className={`grid w-full overflow-hidden rounded-3xl border shadow-[0_25px_80px_rgba(0,0,0,0.12)] lg:grid-cols-2 ${
-                        darkMode
-                            ? "border-[#202a3d] bg-[#0c1321]"
-                            : "border-gray-200 bg-white"
-                    }`}
+                    className={`grid w-full overflow-hidden rounded-3xl border shadow-[0_25px_80px_rgba(0,0,0,0.12)] lg:grid-cols-2 ${darkMode
+                        ? "border-[#202a3d] bg-[#0c1321]"
+                        : "border-gray-200 bg-white"
+                        }`}
                 >
                     {/* LEFT PANEL */}
                     <div
-                        className={`relative hidden min-h-[680px] overflow-hidden p-12 lg:flex lg:flex-col lg:justify-between ${
-                            darkMode
-                                ? "bg-gradient-to-br from-[#11182a] via-[#0c1321] to-[#090e19]"
-                                : "bg-gradient-to-br from-white via-[#f8f8fc] to-[#f1efff]"
-                        }`}
+                        className={`relative hidden min-h-[680px] overflow-hidden p-12 lg:flex lg:flex-col lg:justify-between ${darkMode
+                            ? "bg-gradient-to-br from-[#11182a] via-[#0c1321] to-[#090e19]"
+                            : "bg-gradient-to-br from-white via-[#f8f8fc] to-[#f1efff]"
+                            }`}
                     >
                         {/* Brand */}
                         <div>
@@ -138,11 +236,10 @@ export default function Login() {
                                 </div>
 
                                 <span
-                                    className={`text-lg font-semibold ${
-                                        darkMode
-                                            ? "text-white"
-                                            : "text-gray-900"
-                                    }`}
+                                    className={`text-lg font-semibold ${darkMode
+                                        ? "text-white"
+                                        : "text-gray-900"
+                                        }`}
                                 >
                                     VaultDrive
                                 </span>
@@ -156,11 +253,10 @@ export default function Login() {
                             </p>
 
                             <h1
-                                className={`mt-5 text-5xl font-medium leading-[1.05] tracking-[-0.04em] ${
-                                    darkMode
-                                        ? "text-white"
-                                        : "text-gray-900"
-                                }`}
+                                className={`mt-5 text-5xl font-medium leading-[1.05] tracking-[-0.04em] ${darkMode
+                                    ? "text-white"
+                                    : "text-gray-900"
+                                    }`}
                             >
                                 Your files are
                                 <br />
@@ -168,11 +264,10 @@ export default function Login() {
                             </h1>
 
                             <p
-                                className={`mt-6 max-w-[390px] text-base leading-7 ${
-                                    darkMode
-                                        ? "text-[#8d99ae]"
-                                        : "text-gray-500"
-                                }`}
+                                className={`mt-6 max-w-[390px] text-base leading-7 ${darkMode
+                                    ? "text-[#8d99ae]"
+                                    : "text-gray-500"
+                                    }`}
                             >
                                 Sign in to access your files, folders and
                                 everything you've organized in VaultDrive.
@@ -181,32 +276,29 @@ export default function Login() {
                             {/* Informational feature */}
                             <div className="mt-10 flex max-w-[390px] items-start gap-4">
                                 <div
-                                    className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl text-lg ${
-                                        darkMode
-                                            ? "bg-[#6c5ce7]/10"
-                                            : "bg-[#6c5ce7]/10"
-                                    }`}
+                                    className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl text-lg ${darkMode
+                                        ? "bg-[#6c5ce7]/10"
+                                        : "bg-[#6c5ce7]/10"
+                                        }`}
                                 >
                                     🔒
                                 </div>
 
                                 <div>
                                     <p
-                                        className={`text-sm font-medium ${
-                                            darkMode
-                                                ? "text-[#e5e9f1]"
-                                                : "text-gray-800"
-                                        }`}
+                                        className={`text-sm font-medium ${darkMode
+                                            ? "text-[#e5e9f1]"
+                                            : "text-gray-800"
+                                            }`}
                                     >
                                         Private by design
                                     </p>
 
                                     <p
-                                        className={`mt-1 text-sm leading-6 ${
-                                            darkMode
-                                                ? "text-[#748198]"
-                                                : "text-gray-500"
-                                        }`}
+                                        className={`mt-1 text-sm leading-6 ${darkMode
+                                            ? "text-[#748198]"
+                                            : "text-gray-500"
+                                            }`}
                                     >
                                         Your files stay protected behind
                                         authenticated access.
@@ -216,11 +308,10 @@ export default function Login() {
                         </div>
 
                         <p
-                            className={`text-xs ${
-                                darkMode
-                                    ? "text-[#566177]"
-                                    : "text-gray-400"
-                            }`}
+                            className={`text-xs ${darkMode
+                                ? "text-[#566177]"
+                                : "text-gray-400"
+                                }`}
                         >
                             Secure storage. Simple sharing.
                         </p>
@@ -228,11 +319,10 @@ export default function Login() {
 
                     {/* RIGHT PANEL */}
                     <div
-                        className={`flex min-h-[680px] items-center justify-center p-7 sm:p-10 lg:p-12 ${
-                            darkMode
-                                ? "bg-[#0c1321]"
-                                : "bg-white"
-                        }`}
+                        className={`flex min-h-[680px] items-center justify-center p-7 sm:p-10 lg:p-12 ${darkMode
+                            ? "bg-[#0c1321]"
+                            : "bg-white"
+                            }`}
                     >
                         <div className="w-full max-w-[400px]">
                             {/* Mobile brand */}
@@ -246,11 +336,10 @@ export default function Login() {
                                     </div>
 
                                     <span
-                                        className={`font-semibold ${
-                                            darkMode
-                                                ? "text-white"
-                                                : "text-gray-900"
-                                        }`}
+                                        className={`font-semibold ${darkMode
+                                            ? "text-white"
+                                            : "text-gray-900"
+                                            }`}
                                     >
                                         VaultDrive
                                     </span>
@@ -259,21 +348,19 @@ export default function Login() {
 
                             <div className="mb-8">
                                 <h2
-                                    className={`text-3xl font-semibold tracking-tight ${
-                                        darkMode
-                                            ? "text-white"
-                                            : "text-gray-900"
-                                    }`}
+                                    className={`text-3xl font-semibold tracking-tight ${darkMode
+                                        ? "text-white"
+                                        : "text-gray-900"
+                                        }`}
                                 >
                                     Sign in
                                 </h2>
 
                                 <p
-                                    className={`mt-2 text-sm leading-6 ${
-                                        darkMode
-                                            ? "text-[#7f8ba1]"
-                                            : "text-gray-500"
-                                    }`}
+                                    className={`mt-2 text-sm leading-6 ${darkMode
+                                        ? "text-[#7f8ba1]"
+                                        : "text-gray-500"
+                                        }`}
                                 >
                                     Access your VaultDrive account.
                                 </p>
@@ -293,11 +380,10 @@ export default function Login() {
                                 {/* EMAIL */}
                                 <div>
                                     <label
-                                        className={`mb-2 block text-sm font-medium ${
-                                            darkMode
-                                                ? "text-[#d9deea]"
-                                                : "text-gray-700"
-                                        }`}
+                                        className={`mb-2 block text-sm font-medium ${darkMode
+                                            ? "text-[#d9deea]"
+                                            : "text-gray-700"
+                                            }`}
                                     >
                                         Email address
                                     </label>
@@ -309,17 +395,15 @@ export default function Login() {
                                         onChange={handleChange}
                                         placeholder="you@example.com"
                                         autoComplete="email"
-                                        className={`w-full rounded-xl border px-4 py-3.5 text-sm outline-none transition ${
-                                            darkMode
-                                                ? "bg-[#080e1a] text-white placeholder:text-[#536075]"
-                                                : "bg-gray-50 text-gray-900 placeholder:text-gray-400"
-                                        } ${
-                                            errors.email
+                                        className={`w-full rounded-xl border px-4 py-3.5 text-sm outline-none transition ${darkMode
+                                            ? "bg-[#080e1a] text-white placeholder:text-[#536075]"
+                                            : "bg-gray-50 text-gray-900 placeholder:text-gray-400"
+                                            } ${errors.email
                                                 ? "border-red-500/60"
                                                 : darkMode
-                                                ? "border-[#263149] focus:border-[#6c5ce7]"
-                                                : "border-gray-200 focus:border-[#6c5ce7]"
-                                        }`}
+                                                    ? "border-[#263149] focus:border-[#6c5ce7]"
+                                                    : "border-gray-200 focus:border-[#6c5ce7]"
+                                            }`}
                                     />
 
                                     {errors.email && (
@@ -332,11 +416,10 @@ export default function Login() {
                                 {/* PASSWORD */}
                                 <div>
                                     <label
-                                        className={`mb-2 block text-sm font-medium ${
-                                            darkMode
-                                                ? "text-[#d9deea]"
-                                                : "text-gray-700"
-                                        }`}
+                                        className={`mb-2 block text-sm font-medium ${darkMode
+                                            ? "text-[#d9deea]"
+                                            : "text-gray-700"
+                                            }`}
                                     >
                                         Password
                                     </label>
@@ -353,17 +436,15 @@ export default function Login() {
                                             onChange={handleChange}
                                             placeholder="Enter your password"
                                             autoComplete="current-password"
-                                            className={`w-full rounded-xl border px-4 py-3.5 pr-14 text-sm outline-none transition ${
-                                                darkMode
-                                                    ? "bg-[#080e1a] text-white placeholder:text-[#536075]"
-                                                    : "bg-gray-50 text-gray-900 placeholder:text-gray-400"
-                                            } ${
-                                                errors.password
+                                            className={`w-full rounded-xl border px-4 py-3.5 pr-14 text-sm outline-none transition ${darkMode
+                                                ? "bg-[#080e1a] text-white placeholder:text-[#536075]"
+                                                : "bg-gray-50 text-gray-900 placeholder:text-gray-400"
+                                                } ${errors.password
                                                     ? "border-red-500/60"
                                                     : darkMode
-                                                    ? "border-[#263149] focus:border-[#6c5ce7]"
-                                                    : "border-gray-200 focus:border-[#6c5ce7]"
-                                            }`}
+                                                        ? "border-[#263149] focus:border-[#6c5ce7]"
+                                                        : "border-gray-200 focus:border-[#6c5ce7]"
+                                                }`}
                                         />
 
                                         <button
@@ -373,11 +454,10 @@ export default function Login() {
                                                     (prev) => !prev
                                                 )
                                             }
-                                            className={`absolute right-4 top-1/2 -translate-y-1/2 text-xs transition ${
-                                                darkMode
-                                                    ? "text-[#77849a] hover:text-white"
-                                                    : "text-gray-400 hover:text-gray-700"
-                                            }`}
+                                            className={`absolute right-4 top-1/2 -translate-y-1/2 text-xs transition ${darkMode
+                                                ? "text-[#77849a] hover:text-white"
+                                                : "text-gray-400 hover:text-gray-700"
+                                                }`}
                                         >
                                             {showPassword
                                                 ? "Hide"
@@ -407,51 +487,47 @@ export default function Login() {
                             {/* Divider */}
                             <div className="my-7 flex items-center gap-3">
                                 <div
-                                    className={`h-px flex-1 ${
-                                        darkMode
-                                            ? "bg-[#202a3d]"
-                                            : "bg-gray-200"
-                                    }`}
+                                    className={`h-px flex-1 ${darkMode
+                                        ? "bg-[#202a3d]"
+                                        : "bg-gray-200"
+                                        }`}
                                 />
 
                                 <span
-                                    className={`text-xs ${
-                                        darkMode
-                                            ? "text-[#5f6b80]"
-                                            : "text-gray-400"
-                                    }`}
+                                    className={`text-xs ${darkMode
+                                        ? "text-[#5f6b80]"
+                                        : "text-gray-400"
+                                        }`}
                                 >
                                     OR
                                 </span>
 
                                 <div
-                                    className={`h-px flex-1 ${
-                                        darkMode
-                                            ? "bg-[#202a3d]"
-                                            : "bg-gray-200"
-                                    }`}
+                                    className={`h-px flex-1 ${darkMode
+                                        ? "bg-[#202a3d]"
+                                        : "bg-gray-200"
+                                        }`}
                                 />
                             </div>
 
                             {/* Google */}
                             <button
                                 type="button"
-                                className={`flex w-full items-center justify-center gap-3 rounded-xl border py-3.5 text-sm font-medium transition ${
-                                    darkMode
-                                        ? "border-[#263149] bg-[#080e1a] text-[#dce2ed] hover:border-[#394661] hover:bg-[#0b1220]"
-                                        : "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
-                                }`}
+                                onClick={handleGoogleLogin}
+                                className={`flex w-full items-center justify-center gap-3 rounded-xl border py-3.5 text-sm font-medium transition ${darkMode
+                                    ? "border-[#263149] bg-[#080e1a] text-[#dce2ed] hover:border-[#394661] hover:bg-[#0b1220]"
+                                    : "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
+                                    }`}
                             >
                                 <span className="font-bold">G</span>
                                 Continue with Google
                             </button>
 
                             <p
-                                className={`mt-7 text-center text-sm ${
-                                    darkMode
-                                        ? "text-[#77849a]"
-                                        : "text-gray-500"
-                                }`}
+                                className={`mt-7 text-center text-sm ${darkMode
+                                    ? "text-[#77849a]"
+                                    : "text-gray-500"
+                                    }`}
                             >
                                 Don't have an account?{" "}
                                 <Link
