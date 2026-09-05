@@ -365,7 +365,7 @@ React frontend initialization.
 
 ### 📸 Evidence
 
-![Day 8 – Frontend Setup](docs/day-8/day-8-frontend-setup.png)
+![Day 8 – Frontend Setup](docs/day-8)
 
 ---
 
@@ -390,7 +390,7 @@ Building the main VaultDrive user interface.
 
 ### 📸 Evidence
 
-![Day 9 – Dashboard](docs/day-9/day-9-dashboard.png)
+![Day 9 – Dashboard](docs/day-9)
 
 ---
 
@@ -414,7 +414,7 @@ Connecting the dashboard with file management APIs.
 
 ### 📸 Evidence
 
-![Day 10 – File Upload Management](docs/day-10/day-10-file-management.png)
+![Day 10 – File Upload Management](docs/day-10)
 
 ---
 
@@ -436,7 +436,7 @@ Improving file organization and dashboard functionality.
 
 ### 📸 Evidence
 
-![Day 11 – File Organization](docs/day-11/day-11-file-organization.png)
+![Day 11 – File Organization](docs/day-11)
 
 ---
 
@@ -463,7 +463,7 @@ Improving search, sorting, pagination, and dashboard performance.
 
 ### 📸 Evidence
 
-![Day 12 – Search & Pagination](docs/day-12/day-12-search-pagination.png)
+![Day 12 – Search & Pagination](docs/day-12)
 
 ---
 
